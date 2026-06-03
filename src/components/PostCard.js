@@ -12,6 +12,12 @@ import {
   savePost,
   unsavePost,
   getSavedPostIds,
+  likePost,
+  unlikePost,
+  getLikedPostIds,
+  repostPost,
+  unrepost,
+  getRepostedOriginalIds,
 } from '../lib/sdb';
 import { Avatar } from './ui/Avatar';
 import { StreakPill } from './ui/Pill';
@@ -36,8 +42,6 @@ function formatCount(n) {
   return (v / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
 }
 
-const LIKED_KEY = 'strove.localLiked';
-const REPOSTED_KEY = 'strove.localReposted';
 const VIEWED_KEY = 'strove.localViewed';
 function readSet(key) {
   try { return new Set(JSON.parse(localStorage.getItem(key) || '[]')); } catch { return new Set(); }
@@ -48,8 +52,8 @@ export default function PostCard({ post: initial }) {
   const { user } = useAuth();
   const [post, setPost] = useState(initial);
   const [following, setFollowing] = useState(false);
-  const [liked, setLiked] = useState(() => readSet(LIKED_KEY).has(initial.id));
-  const [reposted, setReposted] = useState(() => readSet(REPOSTED_KEY).has(initial.id));
+  const [liked, setLiked] = useState(false);
+  const [reposted, setReposted] = useState(false);
   const [saved, setSaved] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState([]);
@@ -65,13 +69,17 @@ export default function PostCard({ post: initial }) {
     let cancelled = false;
     (async () => {
       if (!user) return;
-      const [followsRes, savedRes] = await Promise.all([
+      const [followsRes, savedRes, likedRes, repostedRes] = await Promise.all([
         getFollowing(user.id),
         getSavedPostIds(user.id),
+        getLikedPostIds(user.id),
+        getRepostedOriginalIds(user.id),
       ]);
       if (cancelled) return;
       setFollowing(followsRes.data.includes(post.user_id));
       setSaved((savedRes.data || []).includes(post.id));
+      setLiked((likedRes.data || []).includes(post.id));
+      setReposted((repostedRes.data || []).includes(post.id));
     })();
     return () => { cancelled = true; };
   }, [user, post.user_id, post.id]);
@@ -97,21 +105,37 @@ export default function PostCard({ post: initial }) {
   }, [post.id, post.user_id, user]);
 
   async function tapLike() {
-    if (liked) return;
-    const { data, error } = await bumpPostInt(post.id, 'likes');
-    if (error) return;
-    const s = readSet(LIKED_KEY); s.add(post.id); writeSet(LIKED_KEY, s);
-    setLiked(true);
-    if (data) setPost((p) => ({ ...p, likes: data.likes }));
+    if (!user) return;
+    if (liked) {
+      const { error } = await unlikePost(user.id, post.id);
+      if (error) return;
+      setLiked(false);
+      setPost((p) => ({ ...p, likes: Math.max((p.likes || 0) - 1, 0) }));
+    } else {
+      const { error } = await likePost(user.id, post.id);
+      if (error) return;
+      setLiked(true);
+      setPost((p) => ({ ...p, likes: (p.likes || 0) + 1 }));
+    }
   }
 
   async function tapRepost() {
-    if (reposted) return;
-    const { data, error } = await bumpPostInt(post.id, 'reposts');
-    if (error) return;
-    const s = readSet(REPOSTED_KEY); s.add(post.id); writeSet(REPOSTED_KEY, s);
-    setReposted(true);
-    if (data) setPost((p) => ({ ...p, reposts: data.reposts }));
+    if (!user) return;
+    if (reposted) {
+      const { error } = await unrepost(user.id, post.id);
+      if (error) return;
+      setReposted(false);
+      setPost((p) => ({ ...p, reposts: Math.max((p.reposts || 0) - 1, 0) }));
+    } else {
+      const { error } = await repostPost({
+        user_id: user.id,
+        original_post_id: post.id,
+        content: post.content || '',
+      });
+      if (error) return;
+      setReposted(true);
+      setPost((p) => ({ ...p, reposts: (p.reposts || 0) + 1 }));
+    }
   }
 
   async function tapSave() {

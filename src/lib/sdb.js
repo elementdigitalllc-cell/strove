@@ -76,6 +76,61 @@ export async function createPost({ user_id, content }) {
   return { data, error };
 }
 
+/* ============ Likes ============ */
+
+export async function likePost(userId, postId) {
+  const { error } = await supabase
+    .from('likes')
+    .insert({ user_id: userId, post_id: postId });
+  return { error };
+}
+
+export async function unlikePost(userId, postId) {
+  const { error } = await supabase
+    .from('likes')
+    .delete()
+    .eq('user_id', userId)
+    .eq('post_id', postId);
+  return { error };
+}
+
+export async function getLikedPostIds(userId) {
+  const { data, error } = await supabase
+    .from('likes')
+    .select('post_id')
+    .eq('user_id', userId);
+  return { data: (data || []).map((r) => r.post_id), error };
+}
+
+/* ============ Reposts ============ */
+
+export async function repostPost({ user_id, original_post_id, content }) {
+  const { data, error } = await supabase
+    .from('posts')
+    .insert({ user_id, content, original_post_id })
+    .select('*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count)')
+    .single();
+  return { data, error };
+}
+
+export async function unrepost(userId, originalPostId) {
+  const { error } = await supabase
+    .from('posts')
+    .delete()
+    .eq('user_id', userId)
+    .eq('original_post_id', originalPostId);
+  return { error };
+}
+
+export async function getRepostedOriginalIds(userId) {
+  const { data, error } = await supabase
+    .from('posts')
+    .select('original_post_id')
+    .eq('user_id', userId)
+    .not('original_post_id', 'is', null);
+  return { data: (data || []).map((r) => r.original_post_id), error };
+}
+
 /* ============ Comments ============ */
 
 export async function listComments(postId) {
