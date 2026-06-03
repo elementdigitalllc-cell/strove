@@ -134,14 +134,29 @@ export function AuthProvider({ children }) {
       let emailToUse = id;
 
       if (!id.includes('@')) {
+        const uname = id.toLowerCase();
+        console.log('[AuthContext.login] username lookup for =', JSON.stringify(uname));
         const { data: row, error: lookupError } = await supabase
           .from('profiles')
-          .select('email')
-          .ilike('username', id)
+          .select('id, username, email')
+          .eq('username', uname)
           .maybeSingle();
+        console.log('[AuthContext.login] profiles lookup result =', {
+          row,
+          lookupError: lookupError
+            ? { message: lookupError.message, code: lookupError.code }
+            : null,
+        });
         if (lookupError) return { ok: false, error: lookupError.message };
-        if (!row?.email) {
+        if (!row) {
           return { ok: false, error: 'No account found for that username.' };
+        }
+        if (!row.email) {
+          return {
+            ok: false,
+            error:
+              'That username has no email on file yet. Run supabase-profile-contact-columns.sql in Supabase to populate the email column, or log in with your email address instead.',
+          };
         }
         emailToUse = row.email;
       }
