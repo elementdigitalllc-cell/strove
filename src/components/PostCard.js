@@ -13,7 +13,6 @@ import {
   unlikePost,
   repostPost,
   unrepost,
-  getRepostedOriginalIds,
   createNotification,
 } from '../lib/sdb';
 import { Avatar } from './ui/Avatar';
@@ -44,7 +43,7 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow })
   const { user } = useAuth();
   const [post, setPost] = useState(initial);
   const [liked, setLiked] = useState(!!initial.currentUserLiked);
-  const [reposted, setReposted] = useState(false);
+  const [reposted, setReposted] = useState(!!initial.currentUserReposted);
   const [saved, setSaved] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState([]);
@@ -56,6 +55,7 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow })
   useEffect(() => {
     setPost(initial);
     setLiked(!!initial.currentUserLiked);
+    setReposted(!!initial.currentUserReposted);
   }, [initial]);
 
   // Views: bump exactly once on mount. Requires RLS to allow non-owner
@@ -76,13 +76,9 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow })
     let cancelled = false;
     (async () => {
       if (!user) return;
-      const [savedRes, repostedRes] = await Promise.all([
-        getSavedPostIds(user.id),
-        getRepostedOriginalIds(user.id),
-      ]);
+      const { data: savedIds } = await getSavedPostIds(user.id);
       if (cancelled) return;
-      setSaved((savedRes.data || []).includes(post.id));
-      setReposted((repostedRes.data || []).includes(post.id));
+      setSaved((savedIds || []).includes(post.id));
     })();
     return () => { cancelled = true; };
   }, [user, post.id]);
