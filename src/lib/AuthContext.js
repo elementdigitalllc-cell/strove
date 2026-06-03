@@ -94,8 +94,20 @@ export function AuthProvider({ children }) {
           await new Promise((r) => setTimeout(r, 400));
           return loadProfileSafe(sess, { retry: retry + 1 });
         }
-        setProfileError(new Error('Profile not found. Run supabase-trigger.sql to enable the auth trigger.'));
-        setProfile(fallbackProfileFromSession(sess));
+        // Session is live but no matching profile row — treat as a stale/deleted
+        // account and force-clear the session so route guards send them to /.
+        console.warn('[auth] Session has no matching profile row. Signing out.');
+        try {
+          await supabase.auth.signOut();
+        } catch (signOutErr) {
+          console.error('[auth] signOut after missing profile failed:', signOutErr);
+        }
+        setSession(null);
+        setProfile(null);
+        setProfileError(null);
+        if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+          window.location.assign('/');
+        }
         return null;
       }
       setProfile(data);
