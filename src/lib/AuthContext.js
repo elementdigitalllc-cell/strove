@@ -218,15 +218,30 @@ export function AuthProvider({ children }) {
       console.log('[AuthContext.signup] supabase.auth.signUp payload =', { ...payload, password: '***' });
 
       const { data, error } = await supabase.auth.signUp(payload);
-      if (channel === 'phone') {
-        const serializableError = error
-          ? { message: error.message, status: error.status, name: error.name, code: error.code }
-          : null;
-        console.log(
-          '[Phone Signup] Full result:',
-          JSON.stringify({ data, error: serializableError }, null, 2)
-        );
-      }
+      const serializableError = error
+        ? { message: error.message, status: error.status, name: error.name, code: error.code }
+        : null;
+      console.log(
+        `[${channel === 'phone' ? 'Phone' : 'Email'} Signup] Full result:`,
+        JSON.stringify({ data, error: serializableError }, null, 2)
+      );
+      console.log(`[${channel === 'phone' ? 'Phone' : 'Email'} Signup] Key user fields:`, {
+        userId: data?.user?.id,
+        email: data?.user?.email,
+        phone: data?.user?.phone,
+        created_at: data?.user?.created_at,
+        confirmation_sent_at: data?.user?.confirmation_sent_at,
+        email_confirmed_at: data?.user?.email_confirmed_at,
+        phone_confirmed_at: data?.user?.phone_confirmed_at,
+        last_sign_in_at: data?.user?.last_sign_in_at,
+        identities: data?.user?.identities?.map((i) => ({
+          provider: i.provider,
+          identity_id: i.identity_id,
+          created_at: i.created_at,
+          last_sign_in_at: i.last_sign_in_at,
+        })),
+        hasSession: !!data?.session,
+      });
       if (error) {
         console.error('[AuthContext.signup] supabase.auth.signUp error =', {
           message: error.message,
