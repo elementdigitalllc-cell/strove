@@ -1,9 +1,12 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../supabaseClient';
+import { evaluatePassword } from '../lib/password';
 import BackArrow from '../components/BackArrow';
+import OtpBoxes from '../components/OtpBoxes';
+import PasswordChecklist from '../components/PasswordChecklist';
 
 function normalizePhoneLocal(raw) {
   const digits = (raw || '').replace(/\D/g, '');
@@ -22,7 +25,7 @@ function detectContactKindLocal(c) {
 
 export default function Login() {
   const { login } = useAuth();
-  const [view, setView] = useState('login'); // 'login' | 'forgotMenu' | 'forgotPassword' | 'forgotUsername'
+  const [view, setView] = useState('login');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -40,8 +43,7 @@ export default function Login() {
   if (view !== 'login') {
     return (
       <ForgotFlow
-        view={view}
-        onChangeView={setView}
+        initialView={view}
         onBackToLogin={() => {
           setView('login');
           setError('');
@@ -107,7 +109,10 @@ export default function Login() {
   );
 }
 
-function ForgotFlow({ view, onChangeView, onBackToLogin }) {
+function ForgotFlow({ initialView, onBackToLogin }) {
+  const [view, setView] = useState(initialView);
+  const [phoneForReset, setPhoneForReset] = useState('');
+
   return (
     <div className="relative min-h-dvh grid place-items-center px-5 py-10 bg-black font-sans text-white">
       <BackArrow />
@@ -120,20 +125,36 @@ function ForgotFlow({ view, onChangeView, onBackToLogin }) {
         />
 
         {view === 'forgotMenu' ? (
-          <ForgotMenu onChangeView={onChangeView} onBackToLogin={onBackToLogin} />
+          <ForgotMenu onChangeView={setView} />
         ) : view === 'forgotPassword' ? (
-          <ForgotPassword onBack={() => onChangeView('forgotMenu')} />
+          <ForgotPassword
+            onBack={() => setView('forgotMenu')}
+            onPhoneOtpSent={(phone) => {
+              setPhoneForReset(phone);
+              setView('forgotPasswordOtp');
+            }}
+          />
+        ) : view === 'forgotPasswordOtp' ? (
+          <ForgotPasswordOtp
+            phone={phoneForReset}
+            onBack={() => setView('forgotPassword')}
+            onVerified={() => setView('forgotPasswordSetNew')}
+          />
+        ) : view === 'forgotPasswordSetNew' ? (
+          <SetNewPassword />
         ) : (
-          <ForgotUsername onBack={() => onChangeView('forgotMenu')} />
+          <ForgotUsername onBack={() => setView('forgotMenu')} />
         )}
 
-        <button
-          type="button"
-          onClick={onBackToLogin}
-          className="mt-6 text-[13px] text-zinc-500 hover:text-orange hover:underline"
-        >
-          Back to log in
-        </button>
+        {view !== 'forgotPasswordSetNew' ? (
+          <button
+            type="button"
+            onClick={onBackToLogin}
+            className="mt-6 text-[13px] text-zinc-500 hover:text-orange hover:underline"
+          >
+            Back to log in
+          </button>
+        ) : null}
       </div>
     </div>
   );
@@ -167,20 +188,22 @@ function MenuButton({ onClick, children }) {
 function StepHeader({ title, subtitle, onBack }) {
   return (
     <div className="w-full">
-      <button
-        type="button"
-        onClick={onBack}
-        className="inline-flex items-center gap-1 text-[13px] text-zinc-400 hover:text-orange hover:underline mb-3"
-      >
-        <ChevronLeft size={14} /> Back
-      </button>
+      {onBack ? (
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex items-center gap-1 text-[13px] text-zinc-400 hover:text-orange hover:underline mb-3"
+        >
+          <ChevronLeft size={14} /> Back
+        </button>
+      ) : null}
       <h1 className="text-[22px] font-bold tracking-tight text-white">{title}</h1>
       <p className="mt-1.5 text-sm text-zinc-500">{subtitle}</p>
     </div>
   );
 }
 
-function ForgotPassword({ onBack }) {
+function ForgotPassword({ onBack, onPhoneOtpSent }) {
   const [contact, setContact] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -196,27 +219,29 @@ function ForgotPassword({ onBack }) {
       setError('Enter a valid email or phone number.');
       return;
     }
-    if (kind === 'phone') {
-      setError('Password reset by phone is coming soon. Please email support@strove.app for help.');
-      return;
-    }
     setBusy(true);
-    const { error: rpcError } = await supabase.auth.resetPasswordForEmail(trimmed, {
-      redirectTo: window.location.origin + '/login',
-    });
-    setBusy(false);
-    if (rpcError) {
-      setError(rpcError.message);
+    if (kind === 'email') {
+      const { error: rpcError } = await supabase.auth.resetPasswordForEmail(trimmed, {
+        redirectTo: window.location.origin + '/login',
+      });
+      setBusy(false);
+      if (rpcError) return setError(rpcError.message);
+      setSuccess('Check your email for a password reset link.');
       return;
     }
-    setSuccess('Check your email for a password reset link.');
+    // phone
+    const phone = normalizePhoneLocal(trimmed);
+    const { error: otpError } = await supabase.auth.signInWithOtp({ phone });
+    setBusy(false);
+    if (otpError) return setError(otpError.message);
+    onPhoneOtpSent(phone);
   }
 
   return (
     <>
       <StepHeader
         title="Reset your password"
-        subtitle="Enter the email or phone on your account and we'll send a reset link."
+        subtitle="Enter the email or phone on your account and we'll send a reset code."
         onBack={onBack}
       />
       <form onSubmit={submit} className="w-full mt-6 flex flex-col gap-3">
@@ -240,6 +265,147 @@ function ForgotPassword({ onBack }) {
           className="mt-1 w-full h-11 rounded-[6px] bg-orange text-black text-[15px] font-semibold transition hover:brightness-110 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {busy ? 'Sending…' : 'Send reset link'}
+        </button>
+      </form>
+    </>
+  );
+}
+
+function ForgotPasswordOtp({ phone, onBack, onVerified }) {
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [resendIn, setResendIn] = useState(60);
+  const [resendNote, setResendNote] = useState('');
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setInterval(() => setResendIn((s) => (s > 0 ? s - 1 : 0)), 1000);
+    return () => clearInterval(t);
+  }, [resendIn]);
+
+  async function submit(e) {
+    e.preventDefault();
+    setError('');
+    setBusy(true);
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      phone,
+      token: code,
+      type: 'sms',
+    });
+    setBusy(false);
+    if (verifyError) {
+      setError('Invalid code. Please try again.');
+      return;
+    }
+    onVerified();
+  }
+
+  async function resend() {
+    if (resendIn > 0) return;
+    setError('');
+    setResendNote('');
+    const { error: rpcError } = await supabase.auth.signInWithOtp({ phone });
+    if (rpcError) return setError(rpcError.message);
+    setResendNote('New code sent.');
+    setResendIn(60);
+  }
+
+  return (
+    <>
+      <StepHeader
+        title="Check your phone"
+        subtitle="Enter the code we sent to your phone number to reset your password."
+        onBack={onBack}
+      />
+      <form onSubmit={submit} className="w-full mt-6 flex flex-col gap-4">
+        <OtpBoxes code={code} setCode={setCode} hasError={!!error} length={6} />
+        {error ? <AuthError>{error}</AuthError> : null}
+        {resendNote && !error ? (
+          <p className="text-[13px] text-emerald-400">{resendNote}</p>
+        ) : null}
+        <button
+          type="submit"
+          disabled={busy || code.length !== 6}
+          className="mt-1 w-full h-11 rounded-[6px] bg-orange text-black text-[15px] font-semibold transition hover:brightness-110 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {busy ? 'Verifying…' : 'Verify'}
+        </button>
+        <p className="text-[13px] text-zinc-500 text-center">
+          {resendIn > 0 ? (
+            <span>Resend in {resendIn}s</span>
+          ) : (
+            <button
+              type="button"
+              onClick={resend}
+              className="text-zinc-400 hover:text-orange hover:underline"
+            >
+              Resend code
+            </button>
+          )}
+        </p>
+      </form>
+    </>
+  );
+}
+
+function SetNewPassword() {
+  const navigate = useNavigate();
+  const [pw, setPw] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const checks = useMemo(() => evaluatePassword(pw), [pw]);
+  const passwordValid = checks.every((c) => c.met);
+  const match = pw && pw === confirm;
+
+  async function submit(e) {
+    e.preventDefault();
+    setError('');
+    if (!passwordValid) return setError('Password does not meet the requirements below.');
+    if (!match) return setError('Passwords do not match.');
+    setBusy(true);
+    const { error: updateError } = await supabase.auth.updateUser({ password: pw });
+    setBusy(false);
+    if (updateError) return setError(updateError.message);
+    setSuccess('Password updated.');
+    setTimeout(() => navigate('/home'), 800);
+  }
+
+  return (
+    <>
+      <StepHeader title="Set a new password" subtitle="Pick a strong password to finish resetting." />
+      <form onSubmit={submit} className="w-full mt-6 flex flex-col gap-3">
+        <AuthInput
+          type="password"
+          value={pw}
+          onChange={(e) => setPw(e.target.value)}
+          placeholder="New password"
+        />
+        <PasswordChecklist checks={checks} show={pw.length > 0} />
+        <AuthInput
+          type="password"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          placeholder="Confirm new password"
+        />
+        {confirm && !match ? (
+          <p className="text-[12px] text-rose-400">Passwords do not match.</p>
+        ) : null}
+        {error ? <AuthError>{error}</AuthError> : null}
+        {success ? (
+          <div className="text-[13px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-[6px] px-3 py-2">
+            {success} Redirecting…
+          </div>
+        ) : null}
+        <button
+          type="submit"
+          disabled={busy || !passwordValid || !match}
+          className="mt-1 w-full h-11 rounded-[6px] bg-orange text-black text-[15px] font-semibold transition hover:brightness-110 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {busy ? 'Updating…' : 'Update Password'}
         </button>
       </form>
     </>

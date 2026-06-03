@@ -1,22 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Check, X } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../supabaseClient';
+import { evaluatePassword } from '../lib/password';
 import LegalModal from '../components/LegalModal';
 import BackArrow from '../components/BackArrow';
-
-const PASSWORD_RULES = [
-  { id: 'len', label: 'At least 8 characters', test: (p) => p.length >= 8 },
-  { id: 'upper', label: 'One uppercase letter', test: (p) => /[A-Z]/.test(p) },
-  { id: 'lower', label: 'One lowercase letter', test: (p) => /[a-z]/.test(p) },
-  { id: 'num', label: 'One number', test: (p) => /\d/.test(p) },
-  { id: 'special', label: 'One special character (!@#$%^&…)', test: (p) => /[^A-Za-z0-9]/.test(p) },
-];
-
-function evaluatePassword(p) {
-  return PASSWORD_RULES.map((r) => ({ ...r, met: r.test(p) }));
-}
+import OtpBoxes from '../components/OtpBoxes';
+import PasswordChecklist from '../components/PasswordChecklist';
 
 function detectContactKind(c) {
   const s = (c || '').trim();
@@ -398,92 +388,6 @@ function OtpScreen({
         </form>
       </div>
     </div>
-  );
-}
-
-function OtpBoxes({ code, setCode, hasError, length = 8 }) {
-  const refs = useRef([]);
-
-  useEffect(() => {
-    refs.current[0]?.focus();
-  }, []);
-
-  function setDigit(i, val) {
-    const digit = val.replace(/\D/g, '').slice(-1);
-    const arr = code.padEnd(length, ' ').split('');
-    arr[i] = digit || ' ';
-    setCode(arr.join('').replace(/\s/g, ''));
-    if (digit && i < length - 1) refs.current[i + 1]?.focus();
-  }
-
-  function onKeyDown(i, e) {
-    if (e.key === 'Backspace') {
-      if (code[i]) {
-        const arr = code.padEnd(length, ' ').split('');
-        arr[i] = ' ';
-        setCode(arr.join('').replace(/\s/g, ''));
-      } else if (i > 0) {
-        e.preventDefault();
-        const arr = code.padEnd(length, ' ').split('');
-        arr[i - 1] = ' ';
-        setCode(arr.join('').replace(/\s/g, ''));
-        refs.current[i - 1]?.focus();
-      }
-    } else if (e.key === 'ArrowLeft' && i > 0) {
-      refs.current[i - 1]?.focus();
-    } else if (e.key === 'ArrowRight' && i < length - 1) {
-      refs.current[i + 1]?.focus();
-    }
-  }
-
-  function onPaste(e) {
-    const text = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, length);
-    if (!text) return;
-    e.preventDefault();
-    setCode(text);
-    const next = Math.min(text.length, length - 1);
-    refs.current[next]?.focus();
-  }
-
-  return (
-    <div className="flex gap-1.5 justify-between">
-      {Array.from({ length }).map((_, i) => (
-        <input
-          key={i}
-          ref={(el) => (refs.current[i] = el)}
-          type="text"
-          inputMode="numeric"
-          autoComplete={i === 0 ? 'one-time-code' : 'off'}
-          maxLength={1}
-          value={code[i] || ''}
-          onChange={(e) => setDigit(i, e.target.value)}
-          onKeyDown={(e) => onKeyDown(i, e)}
-          onPaste={i === 0 ? onPaste : undefined}
-          className={
-            'flex-1 min-w-0 h-14 text-center text-[20px] font-semibold rounded-[8px] bg-[#111] border text-white outline-none transition-colors focus:border-orange ' +
-            (hasError ? 'border-rose-500/60' : 'border-[#333]')
-          }
-        />
-      ))}
-    </div>
-  );
-}
-
-function PasswordChecklist({ checks, show }) {
-  if (!show) return null;
-  return (
-    <ul className="mt-2 space-y-1">
-      {checks.map((c) => (
-        <li key={c.id} className="flex items-center gap-2 text-[12px]">
-          {c.met ? (
-            <Check size={14} className="text-emerald-400 shrink-0" strokeWidth={3} />
-          ) : (
-            <X size={14} className="text-zinc-500 shrink-0" strokeWidth={2.5} />
-          )}
-          <span className={c.met ? 'text-emerald-400' : 'text-zinc-500'}>{c.label}</span>
-        </li>
-      ))}
-    </ul>
   );
 }
 
