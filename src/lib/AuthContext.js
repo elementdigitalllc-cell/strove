@@ -215,6 +215,38 @@ export function AuthProvider({ children }) {
         identifier = normalizePhone(contact);
         payload = { phone: identifier, password, options: meta };
       }
+
+      // Pre-check for duplicate accounts. Skip silently on RPC failure so the
+      // signup still falls through to supabase.auth.signUp (which has its own
+      // identities-length duplicate detection as a backstop).
+      try {
+        if (channel === 'phone') {
+          const { data: phoneExists, error: rpcErr } = await supabase.rpc(
+            'check_phone_exists',
+            { phone_number: identifier }
+          );
+          if (rpcErr) {
+            console.warn('[AuthContext.signup] check_phone_exists rpc failed:', rpcErr.message);
+          } else if (phoneExists === true) {
+            console.warn('[AuthContext.signup] phone pre-check: already registered');
+            return { ok: false, error: 'phone_exists', channel };
+          }
+        } else {
+          const { data: emailExists, error: rpcErr } = await supabase.rpc(
+            'check_email_exists',
+            { email_address: identifier }
+          );
+          if (rpcErr) {
+            console.warn('[AuthContext.signup] check_email_exists rpc failed:', rpcErr.message);
+          } else if (emailExists === true) {
+            console.warn('[AuthContext.signup] email pre-check: already registered');
+            return { ok: false, error: 'email_exists', channel };
+          }
+        }
+      } catch (preErr) {
+        console.warn('[AuthContext.signup] duplicate pre-check threw:', preErr);
+      }
+
       console.log('[AuthContext.signup] supabase.auth.signUp payload =', { ...payload, password: '***' });
 
       const { data, error } = await supabase.auth.signUp(payload);
