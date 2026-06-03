@@ -292,7 +292,7 @@ function OtpScreen({
   );
 }
 
-function OtpBoxes({ code, setCode, hasError, length = 6 }) {
+function OtpBoxes({ code, setCode, hasError, length = 8 }) {
   const refs = useRef([]);
 
   useEffect(() => {
