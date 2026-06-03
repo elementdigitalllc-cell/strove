@@ -126,7 +126,9 @@ export function AuthProvider({ children }) {
   }
 
   async function login(identifier, password) {
+    console.log('[AuthContext.login] raw input =', JSON.stringify(identifier));
     const id = (identifier || '').trim();
+    console.log('[AuthContext.login] trimmed input =', JSON.stringify(id));
     if (!id || !password) {
       return { ok: false, error: 'Enter your username or email and password.' };
     }
@@ -135,18 +137,45 @@ export function AuthProvider({ children }) {
 
       if (!id.includes('@')) {
         const uname = id.toLowerCase();
-        console.log('[AuthContext.login] username lookup for =', JSON.stringify(uname));
-        const { data: row, error: lookupError } = await supabase
+        console.log('[AuthContext.login] username lookup', {
+          rawInput: identifier,
+          trimmed: id,
+          lowercased: uname,
+        });
+        console.log(
+          '[AuthContext.login] query = supabase.from("profiles").select("id, username, email").eq("username",',
+          JSON.stringify(uname),
+          ').maybeSingle()'
+        );
+
+        const response = await supabase
           .from('profiles')
           .select('id, username, email')
           .eq('username', uname)
           .maybeSingle();
-        console.log('[AuthContext.login] profiles lookup result =', {
-          row,
-          lookupError: lookupError
-            ? { message: lookupError.message, code: lookupError.code }
-            : null,
-        });
+        const { data: row, error: lookupError } = response;
+        console.log(
+          '[AuthContext.login] full supabase response =',
+          JSON.stringify(
+            {
+              data: row,
+              error: lookupError
+                ? {
+                    message: lookupError.message,
+                    code: lookupError.code,
+                    details: lookupError.details,
+                    hint: lookupError.hint,
+                  }
+                : null,
+              status: response.status,
+              statusText: response.statusText,
+              count: response.count,
+            },
+            null,
+            2
+          )
+        );
+
         if (lookupError) return { ok: false, error: lookupError.message };
         if (!row) {
           return { ok: false, error: 'No account found for that username.' };
@@ -159,6 +188,7 @@ export function AuthProvider({ children }) {
           };
         }
         emailToUse = row.email;
+        console.log('[AuthContext.login] resolved emailToUse =', emailToUse);
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
