@@ -42,11 +42,10 @@ function formatCount(n) {
   return (v / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
 }
 
-const VIEWED_KEY = 'strove.localViewed';
-function readSet(key) {
-  try { return new Set(JSON.parse(localStorage.getItem(key) || '[]')); } catch { return new Set(); }
-}
-function writeSet(key, set) { localStorage.setItem(key, JSON.stringify([...set])); }
+// One Set per browser session — deduplicates view bumps so each post counts
+// at most once per page-load regardless of how many times the card scrolls
+// in and out of the viewport.
+const viewedThisSession = new Set();
 
 export default function PostCard({ post: initial }) {
   const { user } = useAuth();
@@ -86,14 +85,12 @@ export default function PostCard({ post: initial }) {
 
   useEffect(() => {
     if (!articleRef.current || !user || post.user_id === user.id) return;
-    const viewed = readSet(VIEWED_KEY);
-    if (viewed.has(post.id)) return;
+    if (viewedThisSession.has(post.id)) return;
     const obs = new IntersectionObserver((entries) => {
       entries.forEach(async (e) => {
         if (e.isIntersecting && !viewedRef.current) {
           viewedRef.current = true;
-          viewed.add(post.id);
-          writeSet(VIEWED_KEY, viewed);
+          viewedThisSession.add(post.id);
           const { data, error } = await bumpPostInt(post.id, 'views');
           if (!error && data) setPost((p) => ({ ...p, views: data.views }));
           obs.disconnect();

@@ -107,7 +107,7 @@ export async function getLikedPostIds(userId) {
 export async function repostPost({ user_id, original_post_id, content }) {
   const { data, error } = await supabase
     .from('posts')
-    .insert({ user_id, content, original_post_id })
+    .insert({ user_id, content, original_post_id, is_repost: true })
     .select('*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count)')
     .single();
   return { data, error };
