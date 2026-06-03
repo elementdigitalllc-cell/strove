@@ -162,15 +162,6 @@ export function AuthProvider({ children }) {
     return cleaned.startsWith('+') ? cleaned : '+' + cleaned;
   }
 
-  const SMS_UNAVAILABLE_MSG =
-    'SMS verification is coming soon. Please sign up with an email address instead.';
-
-  function isSmsProviderError(message = '') {
-    return /provider|sms|twilio|messagebird|vonage|not enabled|not configured|disabled|signups not allowed|unsupported phone/i.test(
-      message
-    );
-  }
-
   function passwordPolicyError(p) {
     if (p.length < 8) return 'Password must be at least 8 characters.';
     if (!/[A-Z]/.test(p)) return 'Password must include an uppercase letter.';
@@ -211,12 +202,7 @@ export function AuthProvider({ children }) {
       }
 
       const { data, error } = await supabase.auth.signUp(payload);
-      if (error) {
-        if (channel === 'phone' && isSmsProviderError(error.message)) {
-          return { ok: false, error: SMS_UNAVAILABLE_MSG };
-        }
-        return { ok: false, error: error.message };
-      }
+      if (error) return { ok: false, error: error.message };
       if (!data.user) return { ok: false, error: 'Sign-up failed — no user returned.' };
 
       if (data.session) {
@@ -226,11 +212,7 @@ export function AuthProvider({ children }) {
       }
       return { ok: true, verified: false, channel, identifier };
     } catch (err) {
-      const msg = err?.message || 'Sign-up failed.';
-      if (channel === 'phone' && isSmsProviderError(msg)) {
-        return { ok: false, error: SMS_UNAVAILABLE_MSG };
-      }
-      return { ok: false, error: msg };
+      return { ok: false, error: err?.message || 'Sign-up failed.' };
     }
   }
 
@@ -263,19 +245,10 @@ export function AuthProvider({ children }) {
           ? { type: 'sms', phone: identifier }
           : { type: 'signup', email: identifier };
       const { error } = await supabase.auth.resend(payload);
-      if (error) {
-        if (channel === 'phone' && isSmsProviderError(error.message)) {
-          return { ok: false, error: SMS_UNAVAILABLE_MSG };
-        }
-        return { ok: false, error: error.message };
-      }
+      if (error) return { ok: false, error: error.message };
       return { ok: true };
     } catch (err) {
-      const msg = err?.message || 'Could not resend code.';
-      if (channel === 'phone' && isSmsProviderError(msg)) {
-        return { ok: false, error: SMS_UNAVAILABLE_MSG };
-      }
-      return { ok: false, error: msg };
+      return { ok: false, error: err?.message || 'Could not resend code.' };
     }
   }
 

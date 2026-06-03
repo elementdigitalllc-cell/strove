@@ -246,7 +246,7 @@ function OtpScreen({
   const title = channel === 'phone' ? 'Check your phone' : 'Check your email';
   const subtitle =
     channel === 'phone'
-      ? 'We sent a code to your phone number via SMS. Enter it below.'
+      ? 'We sent a 6-digit code to your phone number. Enter it below.'
       : `We sent a code to ${identifier}. Enter it below to complete your signup.`;
   const changeLabel = channel === 'phone' ? 'Wrong number? Go back' : 'Wrong email? Go back';
 
