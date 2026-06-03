@@ -35,11 +35,14 @@ export default function Notifications() {
     if (!user?.id) return;
     let cancelled = false;
     (async () => {
-      const { data } = await getMyNotifications(user.id);
+      console.log('[Notifications] fetching for user', user.id);
+      const { data, error } = await getMyNotifications(user.id);
+      console.log('[Notifications] result', { count: data?.length, error });
       if (cancelled) return;
       setItems(data);
       setLoading(false);
-      markAllNotificationsRead(user.id);
+      const { error: markErr } = await markAllNotificationsRead(user.id);
+      if (markErr) console.error('[Notifications] markAllRead error:', markErr);
     })();
     return () => { cancelled = true; };
   }, [user?.id]);

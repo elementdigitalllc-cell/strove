@@ -150,11 +150,22 @@ export async function createPost({ user_id, content }) {
 /* ============ Notifications ============ */
 
 export async function createNotification({ user_id, actor_id, type, post_id = null }) {
-  if (!user_id || !actor_id || user_id === actor_id) return { error: null };
-  const { error } = await supabase
+  console.log('[sdb.createNotification] called', { user_id, actor_id, type, post_id });
+  if (!user_id || !actor_id) {
+    console.warn('[sdb.createNotification] skip: missing user_id or actor_id');
+    return { error: null };
+  }
+  if (user_id === actor_id) {
+    console.log('[sdb.createNotification] skip: self-notification');
+    return { error: null };
+  }
+  const { data, error } = await supabase
     .from('notifications')
-    .insert({ user_id, actor_id, type, post_id });
-  if (error) console.error('[sdb.createNotification] error:', error);
+    .insert({ user_id, actor_id, type, post_id })
+    .select('id')
+    .single();
+  if (error) console.error('[sdb.createNotification] insert error:', error);
+  else console.log('[sdb.createNotification] inserted id =', data?.id);
   return { error };
 }
 

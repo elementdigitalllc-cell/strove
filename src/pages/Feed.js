@@ -70,9 +70,12 @@ export default function Feed() {
 
   const visible = useMemo(() => {
     if (tab === 'following') {
-      return posts.filter(
-        (p) => followingSet.has(p.user_id) || p.user_id === user?.id
-      );
+      return posts.filter((p) => {
+        if (p.user_id === user?.id) return true;
+        if (p.repost_by && followingSet.has(p.repost_by.id)) return true;
+        if (followingSet.has(p.user_id)) return true;
+        return false;
+      });
     }
     return posts;
   }, [posts, followingSet, tab, user]);

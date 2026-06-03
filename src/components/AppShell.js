@@ -3,6 +3,7 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { Home, Trophy, Plus, Lock, User, Bell, MessageSquare } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { getUnreadNotificationCount } from '../lib/sdb';
+import { supabase } from '../supabaseClient';
 import BrandLogo from './BrandLogo';
 import { cn } from '../lib/cn';
 
@@ -36,11 +37,39 @@ export default function AppShell() {
     let cancelled = false;
     async function refresh() {
       const { count } = await getUnreadNotificationCount(user.id);
+      console.log('[AppShell.notifications] unread count =', count);
       if (!cancelled) setUnreadCount(count);
     }
     refresh();
-    const t = setInterval(refresh, 30_000);
-    return () => { cancelled = true; clearInterval(t); };
+
+    // Realtime: any INSERT on notifications for this user bumps the badge
+    // immediately. UPDATEs (e.g. mark-all-read) trigger a refetch so the
+    // count drops back to zero when the user opens the panel.
+    const channel = supabase
+      .channel('notifications-' + user.id)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: 'user_id=eq.' + user.id },
+        (payload) => {
+          console.log('[AppShell.notifications] realtime INSERT', payload.new);
+          if (!cancelled) setUnreadCount((c) => c + 1);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'notifications', filter: 'user_id=eq.' + user.id },
+        () => {
+          if (!cancelled) refresh();
+        }
+      )
+      .subscribe((status) => {
+        console.log('[AppShell.notifications] channel status =', status);
+      });
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
   }, [user?.id, location.pathname]);
 
   return (

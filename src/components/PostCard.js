@@ -15,6 +15,7 @@ import {
   repostPost,
   unrepost,
   getRepostedOriginalIds,
+  createNotification,
 } from '../lib/sdb';
 import { Avatar } from './ui/Avatar';
 import { StreakPill } from './ui/Pill';
@@ -87,6 +88,7 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow })
   }, [user, post.id]);
 
   async function tapLike() {
+    console.log('[PostCard.tapLike] clicked', { userId: user?.id, postId: post.id, liked });
     if (!user) return;
     if (liked) {
       const { error } = await unlikePost(user.id, post.id);
@@ -98,6 +100,12 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow })
       if (error) return;
       setLiked(true);
       setPost((p) => ({ ...p, likes: (p.likes || 0) + 1 }));
+      createNotification({
+        user_id: post.user_id,
+        actor_id: user.id,
+        type: 'like',
+        post_id: post.id,
+      });
     }
   }
 
@@ -114,6 +122,12 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow })
       if (error) return;
       setReposted(true);
       setPost((p) => ({ ...p, reposts: (p.reposts || 0) + 1 }));
+      createNotification({
+        user_id: post.user_id,
+        actor_id: user.id,
+        type: 'repost',
+        post_id: post.id,
+      });
     }
   }
 
@@ -141,16 +155,26 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow })
     const content = commentDraft.trim();
     if (!content || !user) return;
     setCommentSubmitting(true);
+    console.log('[PostCard.submitComment] inserting', { postId: post.id });
     const { data, error } = await createComment({
       post_id: post.id,
       user_id: user.id,
       content,
     });
     setCommentSubmitting(false);
-    if (error) return;
+    if (error) {
+      console.error('[PostCard.submitComment] error:', error);
+      return;
+    }
     setCommentDraft('');
     setComments((c) => [...c, data]);
     setPost((p) => ({ ...p, comments: (p.comments || 0) + 1 }));
+    createNotification({
+      user_id: post.user_id,
+      actor_id: user.id,
+      type: 'comment',
+      post_id: post.id,
+    });
   }
 
   async function share() {
