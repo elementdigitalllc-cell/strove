@@ -2,18 +2,15 @@ import { cva } from 'class-variance-authority';
 import { cn } from '../../lib/cn';
 
 const button = cva(
-  'inline-flex items-center justify-center gap-2 font-semibold rounded-full transition disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 active:scale-[0.97]',
+  'inline-flex items-center justify-center gap-2 font-semibold rounded transition disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 active:scale-[0.98]',
   {
     variants: {
       variant: {
-        primary:
-          'bg-orange-grad text-black hover:brightness-105 shadow-[0_8px_24px_-6px_rgba(249,115,22,0.45)]',
-        ghost:
-          'bg-transparent text-orange border border-orange/40 hover:bg-orange/10',
-        outline:
-          'bg-transparent text-fg border border-border hover:border-muted',
-        muted:
-          'bg-card text-fg border border-border hover:border-muted/60',
+        primary: 'bg-orange text-black hover:brightness-110',
+        ghost: 'bg-transparent text-orange border border-orange/40 hover:bg-orange/10',
+        outline: 'bg-transparent text-fg border border-border hover:border-muted',
+        muted: 'bg-card text-fg border border-border hover:border-muted/60',
+        dark: 'bg-transparent text-fg border border-[#2a2a2a] hover:border-muted',
         link: 'text-orange hover:underline px-0 h-auto',
       },
       size: {

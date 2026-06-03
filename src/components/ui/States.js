@@ -21,7 +21,7 @@ export function LoadingBlock({ label = 'Loading…' }) {
 export function ErrorBlock({ error, onRetry }) {
   const msg = typeof error === 'string' ? error : error?.message || 'Something went wrong.';
   return (
-    <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200 flex flex-col gap-2">
+    <div className="rounded border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200 flex flex-col gap-2">
       <div className="font-semibold">Couldn't load.</div>
       <div className="text-rose-300/80 font-normal">{msg}</div>
       {onRetry ? (
@@ -37,7 +37,7 @@ export function Toast({ tone = 'error', children }) {
     success: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300',
   };
   return (
-    <div className={cn('text-[13px] border rounded-xl px-3.5 py-2.5', map[tone])}>
+    <div className={cn('text-[13px] border rounded px-3.5 py-2.5', map[tone])}>
       {children}
     </div>
   );

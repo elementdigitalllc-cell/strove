@@ -123,7 +123,7 @@ export default function PostCard({ post: initial }) {
         active && color
       )}
     >
-      <span className={cn('grid place-items-center h-7 w-7 rounded-full transition-colors', active && 'bg-current/10')}>
+      <span className={cn('grid place-items-center h-7 w-7 rounded transition-colors', active && 'bg-current/10')}>
         <Icon size={17} strokeWidth={1.8} fill={active ? 'currentColor' : 'none'} />
       </span>
       <span className="tabular-nums">{formatCount(value)}</span>
@@ -146,7 +146,7 @@ export default function PostCard({ post: initial }) {
             <button
               onClick={toggleFollow}
               className={cn(
-                'ml-auto px-3 py-1 text-xs font-bold rounded-full transition-colors',
+                'ml-auto px-3 py-1 text-xs font-bold rounded transition-colors',
                 following
                   ? 'bg-transparent text-muted border border-border hover:text-rose-300 hover:border-rose-500/40'
                   : 'bg-fg text-bg hover:brightness-95'

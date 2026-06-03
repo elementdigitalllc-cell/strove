@@ -29,7 +29,7 @@ export default function Login() {
       </div>
       <Link to="/" className="absolute top-5 left-5 text-sm text-muted hover:text-orange">← Back</Link>
 
-      <div className="relative w-full max-w-[380px] bg-card border border-border rounded-3xl p-6 md:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+      <div className="relative w-full max-w-[380px] bg-card border border-border rounded p-6 md:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
         <div className="flex flex-col items-center gap-2 mb-6">
           <BrandLogo size={56} />
           <h1 className="text-2xl font-extrabold tracking-tight">Welcome back</h1>
@@ -83,7 +83,7 @@ export function Field({ label, children }) {
 
 export function ErrorBox({ children }) {
   return (
-    <div className="text-[13px] text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-xl px-3.5 py-2.5">
+    <div className="text-[13px] text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded px-3.5 py-2.5">
       {children}
     </div>
   );

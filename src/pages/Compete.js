@@ -100,7 +100,7 @@ export default function Compete() {
   return (
     <div className="space-y-4">
       <section
-        className="relative overflow-hidden rounded-3xl border border-orange/30 p-6 text-center"
+        className="relative overflow-hidden rounded border border-orange/30 p-6 text-center"
         style={{
           background:
             'radial-gradient(circle at 20% 20%, rgba(249,115,22,0.35), transparent 60%), radial-gradient(circle at 80% 100%, rgba(245,158,11,0.25), transparent 60%), #111113',
@@ -116,7 +116,7 @@ export default function Compete() {
             { l: 'days', v: rem.day }, { l: 'hrs', v: rem.hr },
             { l: 'min', v: rem.min }, { l: 'sec', v: rem.sec },
           ].map((u) => (
-            <div key={u.l} className="rounded-xl py-3 bg-[#050506] border border-[#1f1f24] shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_4px_14px_rgba(0,0,0,0.5)]">
+            <div key={u.l} className="rounded py-3 bg-[#050506] border border-[#1f1f24] shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_4px_14px_rgba(0,0,0,0.5)]">
               <div className="text-[26px] font-extrabold tabular-nums text-amber-400 [text-shadow:0_0_18px_rgba(245,158,11,0.4)]">{pad(u.v)}</div>
               <div className="text-[10px] uppercase tracking-wider text-muted mt-0.5 font-semibold">{u.l}</div>
             </div>
@@ -131,7 +131,7 @@ export default function Compete() {
             <span className="text-[11px] uppercase tracking-wider text-muted font-semibold">competitors</span>
           </div>
           <div className="w-1 h-1 rounded-full bg-muted" />
-          <div className={cn('text-[13px] font-bold px-3 py-1 rounded-full border', inPot ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40' : 'bg-card text-muted border-border')}>
+          <div className={cn('text-[13px] font-bold px-3 py-1 rounded border', inPot ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40' : 'bg-card text-muted border-border')}>
             {inPot ? "You're in" : 'Not entered'}
           </div>
         </div>
@@ -192,7 +192,7 @@ function PotTab({ user, entries, myEntry, myVote, reload }) {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-2xl border border-border bg-card p-4">
+      <section className="rounded border border-border bg-card p-4">
         <div className="flex items-center justify-between mb-2.5">
           <h3 className="text-[13px] font-bold uppercase tracking-wider text-muted">Your "why I should win" statement</h3>
           {!editing && myEntry?.why_i_should_win ? (
@@ -217,7 +217,7 @@ function PotTab({ user, entries, myEntry, myVote, reload }) {
         )}
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-4">
+      <section className="rounded border border-border bg-card p-4">
         <h3 className="text-[13px] font-bold uppercase tracking-wider text-muted mb-2">Your status</h3>
         {myEntry ? (
           <>
@@ -237,7 +237,7 @@ function PotTab({ user, entries, myEntry, myVote, reload }) {
         )}
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-4">
+      <section className="rounded border border-border bg-card p-4">
         <h3 className="text-[13px] font-bold uppercase tracking-wider text-muted mb-3">Rules</h3>
         <ol className="space-y-1.5">
           {RULES.map((r, i) => (
@@ -249,7 +249,7 @@ function PotTab({ user, entries, myEntry, myVote, reload }) {
         </ol>
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-4">
+      <section className="rounded border border-border bg-card p-4">
         <h3 className="text-[13px] font-bold uppercase tracking-wider text-muted mb-3">All competitors ({entries.length})</h3>
         {entries.length === 0 ? (
           <div className="text-center text-sm text-muted py-8 font-normal">No one has entered this month yet. Be the first.</div>
@@ -305,24 +305,24 @@ function VoteTab({ user, entries, myVote, reload }) {
 
   return (
     <div className="space-y-4">
-      <header className="rounded-2xl border border-border bg-card p-4 flex items-start justify-between gap-3 flex-wrap">
+      <header className="rounded border border-border bg-card p-4 flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-lg font-extrabold tracking-tight">Pick who deserves the pot</h2>
           <p className="text-[13px] text-muted font-normal">One vote per person. Tallies are anonymous.</p>
         </div>
         {myVote ? (
-          <div className="text-xs flex items-center gap-2 bg-emerald-500/12 border border-emerald-500/30 text-muted px-3 py-1.5 rounded-full">
+          <div className="text-xs flex items-center gap-2 bg-emerald-500/12 border border-emerald-500/30 text-muted px-3 py-1.5 rounded">
             <span>Voted for</span>
             <Link to={'/profile/' + myVote.candidate_id} className="text-emerald-400 font-bold">@{myCandidate?.profiles?.username || '—'}</Link>
             <button className="text-muted hover:text-fg" onClick={unvote} disabled={busy}>Change</button>
           </div>
         ) : (
-          <div className="text-xs bg-card border border-border text-muted px-3 py-1.5 rounded-full">Not voted yet</div>
+          <div className="text-xs bg-card border border-border text-muted px-3 py-1.5 rounded">Not voted yet</div>
         )}
       </header>
 
       {candidates.length === 0 ? (
-        <div className="rounded-3xl border border-border bg-card p-9 text-center flex flex-col items-center gap-2">
+        <div className="rounded border border-border bg-card p-9 text-center flex flex-col items-center gap-2">
           <div className="text-4xl">🗳️</div>
           <div className="font-bold">No competitors yet</div>
           <div className="text-sm text-muted font-normal">Once people enter, they'll show up here.</div>
@@ -333,7 +333,7 @@ function VoteTab({ user, entries, myVote, reload }) {
             const p = e.profiles || {};
             const picked = myVote?.candidate_id === e.user_id;
             return (
-              <article key={e.id} className={cn('relative rounded-3xl border bg-card p-4 transition', picked ? 'border-emerald-500/50 bg-emerald-500/[0.04]' : 'border-border hover:border-orange/30')}>
+              <article key={e.id} className={cn('relative rounded border bg-card p-4 transition', picked ? 'border-emerald-500/50 bg-emerald-500/[0.04]' : 'border-border hover:border-orange/30')}>
                 <div className="absolute top-3 right-4 text-[11px] font-extrabold text-muted tracking-widest">#{i + 1}</div>
                 <header className="flex items-center gap-3 mb-3">
                   <Link to={'/profile/' + p.id}><Avatar name={p.full_name || p.username || '?'} size="lg" /></Link>

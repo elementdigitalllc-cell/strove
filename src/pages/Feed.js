@@ -101,7 +101,7 @@ function SuggestedRail({ users, follows, onFollow }) {
       </div>
       <div className="-mx-4 px-4 flex gap-2.5 overflow-x-auto snap-x snap-mandatory no-scrollbar">
         {users.map((u) => (
-          <article key={u.id} className="snap-start shrink-0 w-[150px] bg-card border border-border rounded-2xl p-3.5 flex flex-col items-center gap-1.5 text-center">
+          <article key={u.id} className="snap-start shrink-0 w-[150px] bg-card border border-border rounded p-3.5 flex flex-col items-center gap-1.5 text-center">
             <Link to={'/profile/' + u.id}>
               <Avatar name={u.username || '?'} size="lg" gradient />
             </Link>
@@ -113,7 +113,7 @@ function SuggestedRail({ users, follows, onFollow }) {
             <button
               onClick={() => onFollow(u.id)}
               className={cn(
-                'mt-1.5 w-full text-[12px] font-bold py-1.5 rounded-full',
+                'mt-1.5 w-full text-[12px] font-bold py-1.5 rounded',
                 follows.includes(u.id)
                   ? 'border border-border text-muted'
                   : 'bg-orange-grad text-black shadow-[0_4px_14px_-4px_rgba(249,115,22,0.4)]'
@@ -131,7 +131,7 @@ function SuggestedRail({ users, follows, onFollow }) {
 function FeedList({ posts, tab }) {
   if (posts.length === 0) {
     return (
-      <div className="mx-4 mt-6 rounded-3xl border border-border bg-card p-9 text-center flex flex-col items-center gap-2">
+      <div className="mx-4 mt-6 rounded border border-border bg-card p-9 text-center flex flex-col items-center gap-2">
         <div className="text-4xl">{tab === 'following' ? '👥' : '✨'}</div>
         <div className="font-bold">{tab === 'following' ? "It's quiet here" : 'No posts yet'}</div>
         <div className="text-sm text-muted font-normal max-w-[280px]">

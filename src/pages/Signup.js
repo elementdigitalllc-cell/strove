@@ -39,7 +39,7 @@ export default function Signup() {
       </div>
       <Link to="/" className="absolute top-5 left-5 text-sm text-muted hover:text-orange">← Back</Link>
 
-      <div className="relative w-full max-w-[440px] bg-card border border-border rounded-3xl p-6 md:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+      <div className="relative w-full max-w-[440px] bg-card border border-border rounded p-6 md:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
         <div className="flex flex-col items-center gap-2 mb-5">
           <BrandLogo size={56} />
           <h1 className="text-2xl font-extrabold tracking-tight text-center">
@@ -54,7 +54,7 @@ export default function Signup() {
 
         {needsConfirmation ? (
           <div className="flex flex-col gap-3.5">
-            <div className="text-[13px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-3.5 py-2.5">
+            <div className="text-[13px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded px-3.5 py-2.5">
               Account created. After confirming via email, log in here.
             </div>
             <Link to="/login"><Button full>Go to log in</Button></Link>

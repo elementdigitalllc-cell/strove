@@ -42,7 +42,7 @@ export default function AppShell() {
 
       <main className="flex-1 px-4 pt-4 pb-24">
         {fallback ? (
-          <div className="mb-3 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-200 text-[12.5px] px-3.5 py-2.5 leading-relaxed">
+          <div className="mb-3 rounded border border-amber-500/40 bg-amber-500/10 text-amber-200 text-[12.5px] px-3.5 py-2.5 leading-relaxed">
             <strong className="font-bold">Profile not loaded.</strong>{' '}
             {profileError?.message || 'Using a temporary profile. Some features may be limited.'}
           </div>
@@ -57,7 +57,7 @@ export default function AppShell() {
             to={t.to}
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[11px] font-medium transition-colors',
+                'flex flex-col items-center gap-0.5 py-1.5 rounded text-[11px] font-medium transition-colors',
                 isActive ? 'text-orange' : 'text-muted hover:text-fg'
               )
             }
@@ -68,8 +68,8 @@ export default function AppShell() {
                   className={cn(
                     'grid place-items-center',
                     t.accent
-                      ? cn('h-9 w-9 rounded-xl bg-orange-grad text-black shadow-[0_8px_22px_-8px_rgba(249,115,22,0.55)]', isActive && 'scale-105')
-                      : cn('h-8 w-8 rounded-lg', isActive && 'bg-orange/15')
+                      ? cn('h-9 w-9 rounded bg-orange text-black', isActive && 'scale-105')
+                      : cn('h-8 w-8 rounded', isActive && 'bg-orange/15')
                   )}
                 >
                   <t.Icon size={20} strokeWidth={1.8} />

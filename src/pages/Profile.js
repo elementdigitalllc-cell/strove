@@ -103,7 +103,7 @@ export default function Profile() {
           <div className="flex items-center gap-2">
             {isMe ? (
               <>
-                <button onClick={() => setSettingsOpen(true)} className="h-10 w-10 grid place-items-center rounded-full border border-border text-muted hover:text-fg" aria-label="Settings">
+                <button onClick={() => setSettingsOpen(true)} className="h-10 w-10 grid place-items-center rounded border border-border text-muted hover:text-fg" aria-label="Settings">
                   <Settings size={18} />
                 </button>
                 <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
@@ -126,13 +126,13 @@ export default function Profile() {
         {target.bio ? <p className="text-[15px] leading-relaxed font-normal">{target.bio}</p> : null}
         {target.goal ? <p className="text-[14px] text-muted leading-relaxed font-normal"><span className="text-orange font-semibold">Goal:</span> {target.goal}</p> : null}
 
-        <div className="inline-flex items-center gap-3 px-4 py-2 rounded-2xl border border-orange/40 bg-gradient-to-br from-orange/15 to-amber/5 shadow-[0_6px_22px_-8px_rgba(249,115,22,0.35)]">
+        <div className="inline-flex items-center gap-3 px-4 py-2 rounded border border-orange/40 bg-gradient-to-br from-orange/15 to-amber/5 shadow-[0_6px_22px_-8px_rgba(249,115,22,0.35)]">
           <span className="text-2xl">🔥</span>
           <div>
             <div className="text-2xl font-extrabold text-orange-400 leading-none">{target.streak_count || 0}</div>
             <div className="text-[10px] uppercase tracking-wider text-muted font-semibold mt-0.5">day streak</div>
           </div>
-          {potEntry ? <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/40">In the pot</span> : null}
+          {potEntry ? <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/40">In the pot</span> : null}
         </div>
 
         <div className="flex items-center gap-4 text-sm">
@@ -147,7 +147,7 @@ export default function Profile() {
       </section>
 
       {showWhy ? (
-        <section className="rounded-2xl border-l-4 border-l-orange border-y border-r border-border bg-card p-4">
+        <section className="rounded border-l-4 border-l-orange border-y border-r border-border bg-card p-4">
           <div className="text-[11px] font-bold uppercase tracking-wider text-orange-400 mb-1.5">📌 Pinned · Why I should win the pot</div>
           <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{potEntry.why_i_should_win}</p>
         </section>
@@ -247,7 +247,7 @@ function SettingsModal({ user, onClose, onLogout }) {
 function Modal({ title, children, onClose }) {
   return (
     <div className="fixed inset-0 z-[100] grid place-items-center p-4 bg-black/70 backdrop-blur" onClick={onClose}>
-      <div className="w-full max-w-[440px] bg-card border border-border rounded-3xl p-5 max-h-[calc(100dvh-40px)] overflow-y-auto flex flex-col gap-3.5" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-[440px] bg-card border border-border rounded p-5 max-h-[calc(100dvh-40px)] overflow-y-auto flex flex-col gap-3.5" onClick={(e) => e.stopPropagation()}>
         <header className="flex items-center justify-between">
           <h3 className="text-lg font-bold">{title}</h3>
           <button className="text-muted hover:text-fg" onClick={onClose} aria-label="Close">✕</button>
@@ -262,7 +262,7 @@ function Section({ title, children }) {
   return (
     <div className="flex flex-col gap-1.5">
       <div className="text-[11px] uppercase tracking-wider font-bold text-muted">{title}</div>
-      <ul className="bg-bg/40 border border-border rounded-xl divide-y divide-border overflow-hidden">{children}</ul>
+      <ul className="bg-bg/40 border border-border rounded divide-y divide-border overflow-hidden">{children}</ul>
     </div>
   );
 }

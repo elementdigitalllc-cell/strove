@@ -1,321 +1,522 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
-import BrandLogo from '../components/BrandLogo';
-import { Button } from '../components/ui/Button';
+import {
+  MessageCircle,
+  Repeat2,
+  Heart,
+  Eye,
+  Share,
+  Home,
+  Trophy,
+  Plus,
+  Lock,
+  User,
+  X,
+} from 'lucide-react';
 
-const FEATURES = [
-  { label: 'Daily streaks', title: 'One tap. Chain alive.', body: 'Strove auto checks you in when you open the app. Miss a day, the chain breaks. The pressure is the point.' },
-  { label: 'Public accountability', title: 'The whole feed sees you show up', body: 'Photos, videos, polls, or one-liners. Followers track your goal day by day — no fake highlight reel.' },
-  { label: 'Real money pot', title: '$1 in. Winner takes all.', body: 'Every entrant pays $1, posts weekly, votes once. On the 15th, voting closes. One person walks away with the pot.' },
-  { label: 'Private journal', title: 'A locked notebook + AI insights', body: 'Private logs only you see. AI flags patterns in your work and surfaces friction before you quit.' },
+const FEED_POSTS = [
+  {
+    initial: 'A',
+    color: '#ef4444',
+    name: 'Alex Rivera',
+    handle: '@alex',
+    time: '2h',
+    streak: 47,
+    body: 'Hit 4.2 miles before sunrise. Lungs are dying but streak alive.',
+    stats: { c: 12, r: 4, l: 89, v: '1.2K' },
+  },
+  {
+    initial: 'M',
+    color: '#3b82f6',
+    name: 'Mia Chen',
+    handle: '@mia',
+    time: '5h',
+    streak: 22,
+    body: 'Shipped onboarding rewrite. 14 signups since lunch.',
+    stats: { c: 3, r: 1, l: 41, v: 312 },
+  },
+  {
+    initial: 'S',
+    color: '#a855f7',
+    name: 'Sam Park',
+    handle: '@sam',
+    time: '7h',
+    streak: 31,
+    body: 'Day 31 of Spanish. Ordered coffee at the bodega without switching to English. Tiny win.',
+    stats: { c: 5, r: 2, l: 58, v: 401 },
+  },
+  {
+    initial: 'L',
+    color: '#f59e0b',
+    name: 'Lena Brooks',
+    handle: '@lena',
+    time: '9h',
+    streak: 64,
+    body: 'Closed customer #3 for the Shopify app today. $89 MRR — small, but real.',
+    stats: { c: 8, r: 3, l: 72, v: 638 },
+  },
 ];
 
-const TESTIMONIALS = [
-  { name: 'Alex Rivera', handle: '@alex', body: "47-day streak. First time in my life I've done anything 47 days in a row.", streak: 47 },
-  { name: 'Andre Okafor', handle: '@dre', body: 'Won the April pot. Funded the next 18 books on my list.', streak: 88 },
-  { name: 'Mia Chen', handle: '@mia', body: 'Solo grind became a public scoreboard. Changed everything.', streak: 22 },
+const POLL_POST = {
+  initial: 'D',
+  color: '#10b981',
+  name: 'Andre Okafor',
+  handle: '@dre',
+  time: '6h',
+  streak: 88,
+  question: "What's harder to stay consistent with?",
+  options: [
+    { emoji: '🏃', label: 'Working out', pct: 67 },
+    { emoji: '📚', label: 'Reading daily', pct: 33 },
+  ],
+  meta: '234 votes · 2d left',
+};
+
+const BOTTOM_TABS = [
+  { Icon: Home, label: 'Home', key: 'home' },
+  { Icon: Trophy, label: 'Compete', key: 'compete' },
+  { Icon: Plus, label: 'Post', key: 'post', accent: true },
+  { Icon: Lock, label: 'Journal', key: 'journal' },
+  { Icon: User, label: 'Profile', key: 'profile' },
 ];
 
-const FAQS = [
-  { q: 'Is the pot real money?', a: 'Yes. Every entrant contributes $1. The full pot pays out to the winner. First pot goes live at 1,000 users.' },
-  { q: 'What if nobody good enters?', a: 'Minimum 100 qualified competitors per month. Below that, the pot rolls over to the next month.' },
-  { q: 'Can I just lurk?', a: 'Yes. Strove is a free streak tracker forever. The pot is opt-in.' },
-  { q: 'How are votes counted?', a: 'Every entrant must vote for one other person before voting closes. All vote tallies are anonymous. One vote per person.' },
+const ABOUT_BODY = (
+  <>
+    <p>
+      Strove is the long-game social platform for people working on themselves. Document your goal day by day. Build daily check-in streaks. Follow people grinding toward the same kind of thing.
+    </p>
+    <p>
+      Every month, anyone who's serious can enter the pot — $1 in, the community votes, the winner takes everything. No algorithms ranking who deserves it. Just public effort, public votes, real money.
+    </p>
+    <p>
+      No fake highlight reels. No vanity follower counts. Show up every day or the streak resets. That's the whole product.
+    </p>
+  </>
+);
+
+const FEATURES_BODY = (
+  <ul className="space-y-4">
+    <li>
+      <strong className="block text-white font-bold mb-1">Daily streaks</strong>
+      One tap to check in. Auto check-in fires when you open the app. Miss a day, the streak resets to zero.
+    </li>
+    <li>
+      <strong className="block text-white font-bold mb-1">Public feed</strong>
+      Posts are public by default. Followers track your goal day by day — no curated greatest hits.
+    </li>
+    <li>
+      <strong className="block text-white font-bold mb-1">Monthly pot</strong>
+      $1 to enter. Post weekly. Vote for one other person. Winner takes the whole pot on the 15th.
+    </li>
+    <li>
+      <strong className="block text-white font-bold mb-1">Private journal</strong>
+      Locked notebook only you see. AI surfaces patterns in your work and friction points before you quit.
+    </li>
+  </ul>
+);
+
+const COMPETE_BODY = (
+  <ol className="list-decimal pl-5 space-y-1.5">
+    <li>$1 to enter the monthly pot.</li>
+    <li>Check in every day to keep your streak alive.</li>
+    <li>Post 1 public update per week to stay eligible.</li>
+    <li>Winner takes all.</li>
+    <li>You must vote for one other person before voting closes to stay eligible.</li>
+    <li>Entries close the 15th of each month.</li>
+    <li>All vote counts are anonymous.</li>
+    <li>Minimum 100 qualified competitors or the pot rolls over.</li>
+    <li>First pot goes live at 1,000 users.</li>
+    <li>Each entrant writes a public "why I should win" statement pinned to their profile.</li>
+    <li>Voting is completely public.</li>
+    <li>One vote per person.</li>
+  </ol>
+);
+
+const PRIVACY_BODY = (
+  <>
+    <p>
+      We collect the minimum needed to run Strove: your email, username, posts, follows, journal notes, and pot/vote activity.
+    </p>
+    <p>
+      Your journal is private — only you can read it. Posts, profile info, follower counts, pot entries, and votes are public.
+    </p>
+    <p>
+      We don't sell your data. We use Supabase for auth and storage. You can delete your account and erase your data at any time by emailing us.
+    </p>
+    <p className="text-[#71717a] text-[12px] mt-4">Last updated: June 2026.</p>
+  </>
+);
+
+const TERMS_BODY = (
+  <>
+    <p>
+      By using Strove you agree to behave like an adult. No harassment, no spam, no illegal content. Be honest about your check-ins — fake streaks get banned.
+    </p>
+    <p>
+      Pot entries are final once submitted. Entry fees are non-refundable. We reserve the right to disqualify entrants who break the rules.
+    </p>
+    <p>
+      Strove is provided as-is. We don't guarantee uptime, payout timing, or that you'll actually become a better person. That part is on you.
+    </p>
+    <p className="text-[#71717a] text-[12px] mt-4">Last updated: June 2026.</p>
+  </>
+);
+
+const FOOTER_LINKS = [
+  { key: 'about', label: 'About', title: 'About Strove', body: ABOUT_BODY },
+  { key: 'features', label: 'Features', title: 'Features', body: FEATURES_BODY },
+  { key: 'compete', label: 'Compete', title: 'The monthly pot — 12 rules', body: COMPETE_BODY },
+  { key: 'privacy', label: 'Privacy', title: 'Privacy policy', body: PRIVACY_BODY },
+  { key: 'terms', label: 'Terms', title: 'Terms of service', body: TERMS_BODY },
 ];
+
+// Bare image — mix-blend-mode lighten erases the PNG's baked-in black square
+// so the flame blends seamlessly on any black/near-black surface.
+function LogoImg({ size = 28, className = '' }) {
+  return (
+    <img
+      src={process.env.PUBLIC_URL + '/logo.png'}
+      alt=""
+      width={size}
+      height={size}
+      className={'object-contain ' + className}
+      style={{
+        background: 'transparent',
+        backgroundColor: 'transparent',
+        border: 0,
+        borderRadius: 0,
+        boxShadow: 'none',
+        padding: 0,
+        mixBlendMode: 'lighten',
+      }}
+    />
+  );
+}
 
 export default function Landing() {
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  const [modal, setModal] = useState(null);
 
   return (
-    <div className="relative min-h-dvh bg-bg text-fg overflow-x-hidden">
-      {/* orbs */}
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute -top-32 -left-32 w-[480px] h-[480px] rounded-full blur-[100px] bg-orange/40 opacity-50" />
-        <div className="absolute top-1/4 -right-44 w-[540px] h-[540px] rounded-full blur-[100px] bg-amber/30 opacity-35" />
-        <div className="absolute -bottom-52 left-1/3 w-[600px] h-[600px] rounded-full blur-[120px] bg-orange-600/30 opacity-30" />
-      </div>
-
-      {/* nav */}
-      <header className={`sticky top-0 z-30 transition-all ${scrolled ? 'border-b border-border bg-bg/70 backdrop-blur-xl' : ''}`}>
-        <div className="max-w-[1180px] mx-auto flex items-center justify-between px-5 py-4">
+    <div className="min-h-dvh bg-black text-white font-sans flex flex-col">
+      {/* Top nav */}
+      <header className="border-b border-[#0f0f0f] relative z-30">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-12 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5">
-            <BrandLogo size={30} />
-            <span className="text-xl font-extrabold tracking-tight">Strove</span>
+            <LogoImg size={28} />
+            <span className="text-[18px] font-bold tracking-tight">Strove</span>
           </Link>
-          <nav className="hidden md:flex gap-7 text-sm text-muted">
-            <a href="#features" className="hover:text-fg transition-colors">Features</a>
-            <a href="#pot" className="hover:text-fg transition-colors">The pot</a>
-            <a href="#faq" className="hover:text-fg transition-colors">FAQ</a>
-          </nav>
-          <div className="flex items-center gap-2.5">
-            <Link to="/login" className="px-3 py-2 text-sm font-semibold text-fg hover:text-orange transition-colors">Log in</Link>
-            <Link to="/signup">
-              <Button size="sm">Sign up</Button>
-            </Link>
-          </div>
+          <Link
+            to="/login"
+            className="h-9 px-5 grid place-items-center text-[13px] font-bold rounded bg-transparent text-white border border-white hover:bg-white hover:text-black transition-colors"
+          >
+            Log in
+          </Link>
         </div>
       </header>
 
-      {/* hero */}
-      <section className="relative z-10 px-5 pt-10 md:pt-20 pb-16 md:pb-28">
-        <div className="max-w-[1180px] mx-auto grid gap-10 md:grid-cols-[1.05fr_0.95fr] md:gap-16 items-center">
-          <div className="max-w-[620px]">
-            <span className="inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-orange-400 bg-orange/10 border border-orange/30 px-3 py-1.5 rounded-full mb-6">
-              <span className="w-1.5 h-1.5 rounded-full bg-orange animate-pulse-ring" />
-              The long-game social platform
-            </span>
-            <h1 className="text-[42px] sm:text-[56px] md:text-[72px] font-extrabold leading-[1.02] tracking-tight text-balance">
-              Get paid for working on{' '}
-              <span className="bg-gradient-to-r from-orange via-amber-400 to-orange-400 bg-clip-text text-transparent bg-[length:200%_200%] animate-gradient-shift">
-                yourself
-              </span>
-              .
+      {/* Hero with subtle radial bg */}
+      <main className="flex-1 flex items-center relative overflow-hidden">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              'radial-gradient(ellipse 70% 60% at 50% 45%, #1a0800 0%, rgba(26,8,0,0.5) 35%, rgba(0,0,0,0) 70%)',
+          }}
+        />
+        <div className="relative max-w-[1280px] w-full mx-auto px-6 lg:px-12 py-12 lg:py-16 grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-10 lg:gap-16 items-center">
+          <section>
+            <h1 className="text-[44px] sm:text-[56px] lg:text-[64px] leading-[1.02] font-black tracking-[-0.03em]">
+              The Social Platform For People Who Don't Quit.
             </h1>
-            <p className="mt-5 text-[17px] md:text-lg text-muted leading-relaxed max-w-[540px] font-normal">
-              Document your goal day by day. Build the streak. Compete in the monthly pot — real money, voted on by everyone grinding alongside you.
+            <p className="mt-7 text-[18px] lg:text-[19px] leading-snug text-[#a1a1aa] max-w-[520px] font-normal">
+              Better yourself. Find your people. Get rewarded for consistency.
             </p>
-            <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Link to="/signup">
-                <Button size="lg" className="group">
-                  Create your account
-                  <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
-                </Button>
+            <div className="mt-9 flex flex-wrap items-center gap-3">
+              <Link
+                to="/signup"
+                className="h-12 px-6 grid place-items-center text-[15px] font-bold rounded bg-orange text-black hover:brightness-110 transition"
+              >
+                Create your account
               </Link>
-              <Link to="/login">
-                <Button size="lg" variant="muted">I already have one</Button>
+              <Link
+                to="/login"
+                className="h-12 px-6 grid place-items-center text-[15px] font-bold rounded bg-transparent text-white border border-[#2a2a2a] hover:border-white/60 transition-colors"
+              >
+                Log in
               </Link>
             </div>
-            <div className="mt-8 flex items-center gap-3.5">
-              <div className="flex">
-                {['A', 'M', 'D', '+'].map((c, i) => (
-                  <span
-                    key={c}
-                    className={`-ml-2.5 first:ml-0 h-9 w-9 grid place-items-center rounded-full border-2 border-bg text-[13px] font-bold ${
-                      i === 3 ? 'bg-orange-grad text-black' : 'bg-card text-orange-400'
-                    }`}
-                  >
-                    {c}
-                  </span>
-                ))}
-              </div>
-              <div className="text-[13.5px] text-muted">
-                <strong className="text-fg font-bold">3,481</strong> people building streaks today
-              </div>
-            </div>
-          </div>
+          </section>
 
-          <PhoneMockup />
+          <section className="relative hidden lg:flex items-center justify-center min-h-[720px]">
+            <BackPhone />
+            <FrontPhone />
+          </section>
         </div>
-      </section>
+      </main>
 
-      {/* marquee */}
-      <section className="relative z-10 border-y border-border bg-black/30 py-3.5 overflow-hidden">
-        <div className="flex">
-          {Array.from({ length: 2 }).map((_, r) => (
-            <div key={r} className="flex gap-7 shrink-0 pr-7 animate-marquee whitespace-nowrap">
-              {['SHOW UP', 'STAY ON', 'POST DAILY', 'WIN THE POT', 'COMPOUND', 'NO HIGHLIGHT REELS', 'GET PAID'].map((w) => (
-                <span key={w} className="text-[18px] font-bold tracking-wider text-muted">
-                  {w} <span className="text-orange mx-1">●</span>
-                </span>
-              ))}
-            </div>
+      <footer className="border-t border-[#0f0f0f] relative z-10">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-12 py-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13px] text-[#71717a]">
+          {FOOTER_LINKS.map((l) => (
+            <button
+              key={l.key}
+              className="hover:text-white transition-colors"
+              onClick={() => setModal(l.key)}
+            >
+              {l.label}
+            </button>
           ))}
-        </div>
-      </section>
-
-      {/* features */}
-      <section id="features" className="relative z-10 max-w-[980px] mx-auto px-5 py-20 md:py-28 grid gap-4 md:gap-5 md:grid-cols-2">
-        {FEATURES.map((f, i) => (
-          <article key={f.title} className="bg-card border border-border rounded-3xl p-6 transition hover:-translate-y-0.5 hover:border-orange/30">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-orange-400 mb-3">
-              0{i + 1} · {f.label}
-            </div>
-            <h2 className="text-[22px] font-bold tracking-tight mb-2">{f.title}</h2>
-            <p className="text-[15px] text-muted leading-relaxed font-normal">{f.body}</p>
-          </article>
-        ))}
-      </section>
-
-      {/* pot section */}
-      <section id="pot" className="relative z-10 px-5 py-16 md:py-24">
-        <div className="max-w-[1100px] mx-auto grid gap-10 md:grid-cols-[1fr_0.85fr] md:gap-16 items-center">
-          <div className="max-w-[600px]">
-            <span className="inline-flex text-[12px] font-bold uppercase tracking-wider text-orange-400 bg-orange/10 border border-orange/30 px-3 py-1.5 rounded-full">
-              The monthly pot
-            </span>
-            <h2 className="mt-4 text-[28px] md:text-[42px] font-extrabold tracking-tight leading-[1.1] mb-4">
-              Real money. One winner. Twelve rules.
-            </h2>
-            <p className="text-lg text-muted leading-relaxed mb-6 font-normal">
-              $1 to enter. Post at least once a week. Vote for one other person before the 15th. The whole pot pays out to whoever the community picks.
-            </p>
-            <ul className="grid grid-cols-2 gap-2 mb-7">
-              {['$1 to enter', 'Daily check-ins', 'Weekly public post', 'One anonymous vote', 'Winner takes all'].map((r) => (
-                <li key={r} className="flex items-center gap-2 text-sm text-muted">
-                  <span className="w-1.5 h-1.5 rounded-full bg-orange shrink-0" />
-                  {r}
-                </li>
-              ))}
-            </ul>
-            <Link to="/signup"><Button size="lg">Join the next pot</Button></Link>
-          </div>
-          <PotMockup />
-        </div>
-      </section>
-
-      {/* quotes */}
-      <section className="relative z-10 max-w-[1100px] mx-auto px-5 py-16">
-        <h2 className="text-center text-[28px] md:text-[36px] font-extrabold tracking-tight">
-          Built by people who already grind.
-        </h2>
-        <div className="mt-8 grid gap-3.5 md:grid-cols-3">
-          {TESTIMONIALS.map((t) => (
-            <article key={t.handle} className="bg-card border border-border rounded-2xl p-5">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="h-9 w-9 rounded-full bg-card border border-border grid place-items-center font-bold text-orange-400">{t.name[0]}</div>
-                <div>
-                  <div className="font-bold text-sm">{t.name}</div>
-                  <div className="text-xs text-muted">{t.handle} · 🔥 {t.streak}</div>
-                </div>
-              </div>
-              <p className="text-[14.5px] text-muted leading-relaxed font-normal">"{t.body}"</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* faq */}
-      <section id="faq" className="relative z-10 max-w-[800px] mx-auto px-5 py-16">
-        <h2 className="text-center text-[28px] md:text-[36px] font-extrabold tracking-tight">Questions</h2>
-        <div className="mt-8 flex flex-col gap-2">
-          {FAQS.map((f) => (
-            <FaqRow key={f.q} q={f.q} a={f.a} />
-          ))}
-        </div>
-      </section>
-
-      {/* final cta */}
-      <section className="relative z-10 px-5 py-20 md:py-24 text-center flex flex-col items-center gap-5">
-        <h2 className="text-[32px] md:text-[52px] font-extrabold tracking-tight leading-[1.05]">
-          Stop{' '}
-          <span className="bg-gradient-to-r from-orange to-amber-400 bg-clip-text text-transparent">starting over</span>.<br />
-          Start showing up.
-        </h2>
-        <Link to="/signup">
-          <Button size="lg" className="group">
-            Create your account
-            <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
-          </Button>
-        </Link>
-        <p className="text-xs text-muted">Free to use. $1 to enter the pot. Cancel anytime.</p>
-      </section>
-
-      <footer className="relative z-10 border-t border-border bg-black/30">
-        <div className="max-w-[1100px] mx-auto px-5 py-7 flex flex-wrap items-center justify-between gap-3 text-[13px] text-muted">
-          <div className="flex items-center gap-2.5">
-            <BrandLogo size={28} />
-            <span className="text-fg font-extrabold">Strove</span>
-          </div>
-          <div>Get paid for working on yourself.</div>
-          <div className="text-muted">© Strove</div>
+          <span>© 2026 Strove</span>
         </div>
       </footer>
+
+      {modal ? (
+        <ContentModal item={FOOTER_LINKS.find((l) => l.key === modal)} onClose={() => setModal(null)} />
+      ) : null}
     </div>
   );
 }
 
-function FaqRow({ q, a }) {
-  const [open, setOpen] = useState(false);
+function ContentModal({ item, onClose }) {
+  if (!item) return null;
   return (
-    <div className={`bg-card border border-border rounded-2xl overflow-hidden transition-colors ${open ? 'border-orange/30' : ''}`}>
-      <button className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left text-[15px] font-semibold" onClick={() => setOpen((v) => !v)}>
-        <span>{q}</span>
-        <span className="text-orange-400 text-xl w-6 text-center">{open ? '−' : '+'}</span>
-      </button>
-      <div className={`overflow-hidden transition-[max-height,padding] ${open ? 'max-h-[200px] px-5 pb-4' : 'max-h-0 px-5'}`}>
-        <p className="text-[14.5px] text-muted leading-relaxed font-normal">{a}</p>
+    <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm grid place-items-center p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-[560px] max-h-[80vh] overflow-y-auto bg-[#0a0a0a] border border-[#27272a] rounded p-6 sm:p-7"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="flex items-start justify-between gap-4 mb-4">
+          <h2 className="text-[22px] font-extrabold tracking-tight">{item.title}</h2>
+          <button onClick={onClose} className="h-8 w-8 grid place-items-center rounded text-[#71717a] hover:text-white hover:bg-white/5" aria-label="Close">
+            <X size={18} />
+          </button>
+        </header>
+        <div className="text-[14.5px] leading-relaxed text-[#a1a1aa] font-normal space-y-3">{item.body}</div>
       </div>
     </div>
   );
 }
 
-function PhoneMockup() {
+/* ===========================================================
+   Phone chrome
+   =========================================================== */
+function PhoneFrame({ children, width = 320, height = 660, className = '', style }) {
   return (
-    <div className="relative min-h-[540px] grid place-items-center">
-      <div className="relative w-[320px] h-[600px] rounded-[44px] border border-white/[0.06] p-3.5 -rotate-3 hover:-rotate-1 hover:-translate-y-1 transition-transform duration-500 shadow-[0_50px_80px_-20px_rgba(0,0,0,0.8)]" style={{ background: 'linear-gradient(160deg,#1c1c21 0%,#0d0d10 100%)' }}>
-        <div className="absolute top-3.5 left-1/2 -translate-x-1/2 w-[100px] h-[26px] rounded-[14px] bg-black z-10" />
-        <div className="h-full rounded-[32px] bg-bg pt-9 px-3.5 pb-3.5 flex flex-col gap-2.5 overflow-hidden">
-          <div className="flex justify-between items-center pb-2 border-b border-border">
-            <div className="flex items-center gap-1.5 text-[13px] font-bold">
-              <BrandLogo size={22} />
-              <span>Strove</span>
+    <div
+      className={'rounded-[44px] bg-black border border-[#1a1a1a] p-3 ' + className}
+      style={{ width, height, ...style }}
+    >
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 w-[100px] h-[26px] rounded-[14px] bg-black z-10" />
+      <div className="h-full rounded-[34px] bg-black pt-9 flex flex-col overflow-hidden">{children}</div>
+    </div>
+  );
+}
+
+function PhoneTopBar({ avatarColor = '#f97316', avatarLabel = 'A' }) {
+  return (
+    <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#1a1a1a]">
+      <div className="flex items-center gap-2">
+        <LogoImg size={20} />
+        <span className="text-[14px] font-bold tracking-tight">Strove</span>
+      </div>
+      <div
+        className="h-7 w-7 rounded-full grid place-items-center text-[11px] font-bold"
+        style={{ backgroundColor: avatarColor, color: avatarColor === '#f97316' ? '#000' : '#fff' }}
+      >
+        {avatarLabel}
+      </div>
+    </div>
+  );
+}
+
+function PhoneBottomNav({ activeKey }) {
+  return (
+    <nav className="border-t border-[#1a1a1a] grid grid-cols-5 gap-1 px-2 pt-1.5 pb-2">
+      {BOTTOM_TABS.map((t) => {
+        const active = t.key === activeKey;
+        return (
+          <div key={t.key} className="flex flex-col items-center gap-0.5 py-1">
+            <span
+              className={
+                'grid place-items-center ' +
+                (t.accent
+                  ? 'h-8 w-8 rounded bg-orange text-black'
+                  : active
+                  ? 'h-7 w-7 rounded bg-orange/15 text-orange'
+                  : 'h-7 w-7 text-[#71717a]')
+              }
+            >
+              <t.Icon size={16} strokeWidth={1.8} />
+            </span>
+            <span className={'text-[9px] font-medium ' + (active ? 'text-orange' : 'text-[#71717a]')}>{t.label}</span>
+          </div>
+        );
+      })}
+    </nav>
+  );
+}
+
+/* ===========================================================
+   FRONT PHONE — real app home: topbar + tabs + posts + poll + nav
+   =========================================================== */
+function FrontPhone() {
+  return (
+    <div
+      className="relative z-20 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.95)]"
+      style={{ transform: 'translateX(-40px)' }}
+    >
+      <PhoneFrame width={320} height={680} className="relative">
+        <PhoneTopBar avatarColor="#f97316" avatarLabel="A" />
+
+        {/* Tabs */}
+        <div className="flex border-b border-[#1a1a1a] px-4">
+          <button className="relative flex-1 py-2 text-[12px] font-semibold text-white">
+            Discover
+            <span className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[2px] w-6 bg-orange" />
+          </button>
+          <button className="flex-1 py-2 text-[12px] font-semibold text-[#71717a]">Following</button>
+        </div>
+
+        {/* Feed — 5 items: 4 posts + 1 poll, mixed types */}
+        <div className="flex-1 px-3 overflow-hidden">
+          <PostRow post={FEED_POSTS[0]} divider />
+          <PostRow post={FEED_POSTS[1]} divider />
+          <PollPostRow post={POLL_POST} divider />
+          <PostRow post={FEED_POSTS[2]} divider />
+          <PostRow post={FEED_POSTS[3]} />
+        </div>
+
+        <PhoneBottomNav activeKey="home" />
+      </PhoneFrame>
+    </div>
+  );
+}
+
+function PostRow({ post, divider }) {
+  return (
+    <article className={'flex gap-2.5 py-2.5 ' + (divider ? 'border-b border-[#1a1a1a]' : '')}>
+      <div
+        className="h-9 w-9 rounded-full grid place-items-center text-[13px] font-bold text-white shrink-0"
+        style={{ backgroundColor: post.color }}
+      >
+        {post.initial}
+      </div>
+      <div className="flex-1 min-w-0">
+        <PostHeader post={post} />
+        <p className="mt-1 text-[12px] leading-[1.4] text-white font-normal">{post.body}</p>
+        <div className="mt-1.5 flex items-center justify-between text-[#71717a] pr-2 text-[10.5px] font-medium">
+          <span className="inline-flex items-center gap-1"><MessageCircle size={12} strokeWidth={1.8} />{post.stats.c}</span>
+          <span className="inline-flex items-center gap-1"><Repeat2 size={12} strokeWidth={1.8} />{post.stats.r}</span>
+          <span className="inline-flex items-center gap-1"><Heart size={12} strokeWidth={1.8} />{post.stats.l}</span>
+          <span className="inline-flex items-center gap-1"><Eye size={12} strokeWidth={1.8} />{post.stats.v}</span>
+          <Share size={12} strokeWidth={1.8} />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function PostHeader({ post }) {
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap text-[11.5px]">
+      <span className="font-bold text-white">{post.name}</span>
+      <span className="inline-flex items-center gap-0.5 px-1.5 py-[1px] rounded bg-orange text-black text-[9.5px] font-bold leading-none">
+        🔥 {post.streak}
+      </span>
+      <span className="text-[#71717a] font-medium">{post.handle} · {post.time}</span>
+    </div>
+  );
+}
+
+function PollPostRow({ post, divider }) {
+  return (
+    <article className={'flex gap-2.5 py-2.5 ' + (divider ? 'border-b border-[#1a1a1a]' : '')}>
+      <div
+        className="h-9 w-9 rounded-full grid place-items-center text-[13px] font-bold text-white shrink-0"
+        style={{ backgroundColor: post.color }}
+      >
+        {post.initial}
+      </div>
+      <div className="flex-1 min-w-0">
+        <PostHeader post={post} />
+        <p className="mt-1 text-[12px] leading-[1.4] text-white font-normal">{post.question}</p>
+        <div className="mt-2 flex flex-col gap-1.5">
+          {post.options.map((o) => (
+            <div
+              key={o.label}
+              className="relative h-7 rounded bg-[#0d0d0d] border border-[#1a1a1a] overflow-hidden flex items-center text-[10.5px] px-2"
+            >
+              <span
+                className="absolute inset-y-0 left-0 bg-orange/20 border-r border-orange/50"
+                style={{ width: o.pct + '%' }}
+              />
+              <span className="relative flex-1 flex items-center justify-between font-semibold">
+                <span className="text-white">{o.emoji} {o.label}</span>
+                <span className="text-orange font-bold">{o.pct}%</span>
+              </span>
             </div>
-            <div className="h-6 w-6 rounded-full bg-orange-grad grid place-items-center text-black text-[11px] font-bold">A</div>
-          </div>
-          <div className="flex gap-3.5 pb-1 border-b border-border">
-            <button className="relative text-xs font-semibold text-fg py-1.5">Discover<span className="absolute left-0 right-0 -bottom-1 h-0.5 rounded-full bg-orange-grad" /></button>
-            <button className="text-xs font-semibold text-muted py-1.5">Following</button>
-          </div>
-          {[
-            { name: 'Alex Rivera', handle: '@alex · 2h', streak: 47, body: 'Hit 4.2 miles before sunrise. Lungs are dying but streak alive.', acts: ['💬 12', '🔁 4', '❤️ 89', '👁 1.2K'] },
-            { name: 'Mia Chen', handle: '@mia · 5h', streak: 22, body: 'Shipped onboarding rewrite. 14 signups since lunch.', acts: ['💬 3', '🔁 1', '❤️ 41', '👁 312'] },
-          ].map((p, i) => (
-            <article key={i} className="flex gap-2.5 py-2.5 border-b border-border">
-              <div className="h-7 w-7 rounded-full bg-card border border-border grid place-items-center text-xs font-bold text-orange-400">{p.name[0]}</div>
-              <div className="flex-1 text-xs leading-snug">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <strong className="text-xs">{p.name}</strong>
-                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-bold leading-none rounded-full bg-orange-grad text-black">🔥 {p.streak}</span>
-                  <span className="text-muted text-[11px]">{p.handle}</span>
-                </div>
-                <p className="my-1">{p.body}</p>
-                <div className="flex gap-2.5 text-muted text-[11px]">
-                  {p.acts.map((a) => <span key={a}>{a}</span>)}
-                </div>
-              </div>
-            </article>
           ))}
         </div>
+        <div className="mt-1.5 text-[10px] text-[#71717a] font-medium">{post.meta}</div>
       </div>
-      <div className="absolute bottom-3 -right-1 rotate-6 px-4 py-3 rounded-2xl border border-orange/40 backdrop-blur bg-[linear-gradient(135deg,rgba(249,115,22,0.22),rgba(245,158,11,0.08))] flex items-center gap-2.5 shadow-[0_20px_40px_rgba(0,0,0,0.6)]">
-        <span className="text-2xl">🔥</span>
-        <div>
-          <div className="text-[22px] font-extrabold text-orange-400 leading-none">88</div>
-          <div className="text-[10px] uppercase tracking-wider text-muted mt-0.5">day streak</div>
-        </div>
-      </div>
-    </div>
+    </article>
   );
 }
 
-function PotMockup() {
+/* ===========================================================
+   BACK PHONE — full Compete screen, "Strove" topbar, w/ nav
+   =========================================================== */
+function BackPhone() {
   return (
-    <div className="relative rounded-3xl border border-orange/30 p-7 text-center overflow-hidden shadow-[0_40px_80px_-20px_rgba(249,115,22,0.25)]" style={{
-      background:
-        'radial-gradient(circle at 30% 20%, rgba(249,115,22,0.38), transparent 60%), radial-gradient(circle at 80% 100%, rgba(245,158,11,0.28), transparent 60%), #111113',
-    }}>
-      <div className="text-[12px] uppercase tracking-wider font-bold text-muted">June pot</div>
-      <div className="my-2 text-[60px] md:text-[72px] font-extrabold tracking-tighter leading-none bg-gradient-to-br from-orange-400 to-amber-400 bg-clip-text text-transparent">
-        <span className="text-[0.5em] align-super mr-1">$</span>2,840
-      </div>
-      <div className="grid grid-cols-4 gap-1.5 mb-3.5">
-        {['12', '08', '41', '17'].map((v, i) => (
-          <div key={i} className="rounded-xl bg-black/40 border border-border py-2">
-            <div className="text-[22px] font-extrabold tabular-nums">{v}</div>
-            <div className="text-[10px] uppercase tracking-wider text-muted mt-0.5">{['days', 'hrs', 'min', 'sec'][i]}</div>
+    <div
+      className="absolute z-10 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.9)]"
+      style={{ transform: 'translate(220px, 60px) rotate(15deg)' }}
+    >
+      <PhoneFrame width={300} height={640} className="relative">
+        <PhoneTopBar avatarColor="#3b82f6" avatarLabel="M" />
+
+        <div className="flex-1 px-4 pt-4 pb-3 overflow-hidden">
+          <div className="rounded border border-[#1a1a1a] bg-[#0a0a0a] p-4 flex flex-col items-center gap-4">
+            <div className="text-[11px] uppercase tracking-[0.25em] text-[#71717a] font-bold">June 2026 Pot</div>
+            <div className="text-[52px] font-black tracking-tighter text-orange leading-none">
+              <span className="text-[24px] align-super font-bold mr-0.5">$</span>4,820
+            </div>
+
+            <div className="w-full grid grid-cols-4 gap-1.5">
+              {[
+                { v: '12', l: 'DAYS' },
+                { v: '08', l: 'HRS' },
+                { v: '41', l: 'MIN' },
+                { v: '17', l: 'SEC' },
+              ].map((u) => (
+                <div key={u.l} className="rounded bg-[#111] py-2 text-center">
+                  <div className="text-[18px] font-black tabular-nums text-white leading-none">{u.v}</div>
+                  <div className="text-[8.5px] uppercase tracking-wider text-[#71717a] mt-0.5 font-bold">{u.l}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-emerald-500/15 border border-emerald-500/35 text-emerald-400 text-[10.5px] font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              Active · Day 47
+            </div>
+
+            <div
+              role="presentation"
+              className="h-11 w-full rounded bg-orange text-black text-[13.5px] font-bold grid place-items-center select-none cursor-default"
+            >
+              Enter the pot ($1)
+            </div>
+
+            <div className="w-full flex flex-col items-center gap-1 pt-1 text-[10.5px] text-[#71717a] font-medium">
+              <span>847 competitors this month</span>
+              <span>🏆 Last winner took $3,240</span>
+            </div>
           </div>
-        ))}
-      </div>
-      <div className="text-[13px] text-muted mb-2.5">142 in · $1 to enter</div>
-      <div className="inline-block text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-orange/20 text-orange-400">
-        Winner takes all
-      </div>
+        </div>
+
+        <PhoneBottomNav activeKey="compete" />
+      </PhoneFrame>
     </div>
   );
 }

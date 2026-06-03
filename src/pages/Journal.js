@@ -114,7 +114,7 @@ export default function Journal() {
   return (
     <div className="space-y-4">
       <section
-        className="relative overflow-hidden rounded-2xl border border-violet/50 p-4"
+        className="relative overflow-hidden rounded border border-violet/50 p-4"
         style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.22), rgba(168,85,247,0.08)), #1a1530' }}
       >
         <div className="text-[11px] font-bold uppercase tracking-wider text-violet-300 mb-2">✨ AI Insight · today</div>
@@ -127,7 +127,7 @@ export default function Journal() {
           { v: myPosts.length, l: 'public posts' },
           { v: notes.length, l: 'notes' },
         ].map((s) => (
-          <div key={s.l} className="bg-card border border-border rounded-2xl py-3 text-center">
+          <div key={s.l} className="bg-card border border-border rounded py-3 text-center">
             <strong className="block text-2xl font-extrabold text-orange-400 leading-none">{s.v}</strong>
             <span className="block text-[11px] uppercase tracking-wider text-muted font-semibold mt-1.5">{s.l}</span>
           </div>
@@ -145,20 +145,20 @@ export default function Journal() {
         </div>
       </form>
 
-      <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-card border border-border text-muted">
+      <div className="flex items-center gap-2.5 px-4 py-2.5 rounded bg-card border border-border text-muted">
         <Search size={16} />
         <input className="flex-1 bg-transparent outline-none text-sm text-fg" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search past notes" />
       </div>
 
       <section className="flex flex-col gap-2.5">
         {filtered.length === 0 ? (
-          <div className="rounded-3xl border border-border bg-card p-9 text-center flex flex-col items-center gap-2">
+          <div className="rounded border border-border bg-card p-9 text-center flex flex-col items-center gap-2">
             <div className="text-4xl">📓</div>
             <div className="font-bold">{query.trim() ? 'No matches' : 'Your log is empty'}</div>
             <div className="text-sm text-muted font-normal">{query.trim() ? 'Try a different word.' : 'Drop a thought above.'}</div>
           </div>
         ) : filtered.map((n) => (
-          <article key={n.id} className="rounded-2xl border border-border bg-card p-3.5">
+          <article key={n.id} className="rounded border border-border bg-card p-3.5">
             <header className="flex items-center gap-2 mb-1.5">
               <span className="text-[11px] font-bold uppercase tracking-wider text-muted">📝 Note</span>
               <span className="text-[11px] text-muted font-normal ml-1">{timeAgo(n.created_at)}</span>
