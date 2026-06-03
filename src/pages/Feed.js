@@ -4,6 +4,7 @@ import {
   getFeedPosts,
   getFollowing,
   getRepostCountsByPost,
+  getLikedPostIds,
   follow,
   unfollow,
   createNotification,
@@ -23,9 +24,10 @@ export default function Feed() {
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const [postsResult, followsResult] = await Promise.all([
+    const [postsResult, followsResult, likedResult] = await Promise.all([
       getFeedPosts(),
       user ? getFollowing(user.id) : Promise.resolve({ data: [] }),
+      user ? getLikedPostIds(user.id) : Promise.resolve({ data: [] }),
     ]);
     if (postsResult.error) {
       setError(postsResult.error);
@@ -33,9 +35,11 @@ export default function Feed() {
       const fetched = postsResult.data || [];
       const ids = fetched.map((p) => p.id);
       const { data: repostCounts } = await getRepostCountsByPost(ids);
+      const likedSet = new Set(likedResult.data || []);
       const merged = fetched.map((p) => ({
         ...p,
         reposts: repostCounts[p.id] || 0,
+        currentUserLiked: likedSet.has(p.id),
       }));
       setPosts(merged);
     }

@@ -11,7 +11,6 @@ import {
   getSavedPostIds,
   likePost,
   unlikePost,
-  getLikedPostIds,
   repostPost,
   unrepost,
   getRepostedOriginalIds,
@@ -44,7 +43,7 @@ function formatCount(n) {
 export default function PostCard({ post: initial, isFollowing, onToggleFollow }) {
   const { user } = useAuth();
   const [post, setPost] = useState(initial);
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(!!initial.currentUserLiked);
   const [reposted, setReposted] = useState(false);
   const [saved, setSaved] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -54,7 +53,10 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow })
   const [shareNote, setShareNote] = useState('');
   const articleRef = useRef(null);
 
-  useEffect(() => setPost(initial), [initial]);
+  useEffect(() => {
+    setPost(initial);
+    setLiked(!!initial.currentUserLiked);
+  }, [initial]);
 
   // Views: bump exactly once on mount. Requires RLS to allow non-owner
   // UPDATE on posts.views (see supabase-views-policy.sql).
@@ -74,14 +76,12 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow })
     let cancelled = false;
     (async () => {
       if (!user) return;
-      const [savedRes, likedRes, repostedRes] = await Promise.all([
+      const [savedRes, repostedRes] = await Promise.all([
         getSavedPostIds(user.id),
-        getLikedPostIds(user.id),
         getRepostedOriginalIds(user.id),
       ]);
       if (cancelled) return;
       setSaved((savedRes.data || []).includes(post.id));
-      setLiked((likedRes.data || []).includes(post.id));
       setReposted((repostedRes.data || []).includes(post.id));
     })();
     return () => { cancelled = true; };
@@ -265,7 +265,7 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow })
         <div className="mt-2 pt-2.5 border-t border-border flex items-center justify-between max-w-[500px]">
           <Action icon={MessageCircle} value={post.comments || 0} active={commentsOpen} color="text-orange-400" onClick={openComments} ariaLabel="Comment" />
           <Action icon={Repeat2} value={post.reposts || 0} active={reposted} color="text-emerald-400" onClick={tapRepost} ariaLabel="Repost" />
-          <Action icon={Heart} value={post.likes || 0} active={liked} color="text-orange" onClick={tapLike} ariaLabel="Like" />
+          <Action icon={Heart} value={post.likes || 0} active={liked} color="text-red-500" onClick={tapLike} ariaLabel="Like" />
           <Action icon={Eye} value={post.views || 0} ariaLabel="Views" />
           <Action icon={Bookmark} active={saved} color="text-orange-400" onClick={tapSave} ariaLabel="Save" />
           <Action icon={Share} onClick={share} ariaLabel="Share" />
