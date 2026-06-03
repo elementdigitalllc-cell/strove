@@ -50,6 +50,17 @@ export function AuthProvider({ children }) {
 
       const result = supabase.auth.onAuthStateChange(async (_event, sess) => {
         try {
+          // Password-reset OTP succeeds by creating a real session. Keep it
+          // off our React state so PublicOnly guards do not bounce the user
+          // to /home before they pick a new password. SetNewPassword calls
+          // consumePasswordReset() once the update is done.
+          if (
+            typeof window !== 'undefined' &&
+            sessionStorage.getItem('pendingPasswordReset') === 'true'
+          ) {
+            console.log('[auth] pendingPasswordReset flag set; ignoring auth state change');
+            return;
+          }
           setSession(sess || null);
           if (sess) {
             await loadProfileSafe(sess);
@@ -439,6 +450,20 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // Called by SetNewPassword after updateUser succeeds. Clears the bypass
+  // flag, reads the now-current Supabase session, and hydrates React state so
+  // Protected routes start rendering.
+  async function consumePasswordReset() {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('pendingPasswordReset');
+    }
+    const { data } = await supabase.auth.getSession();
+    const sess = data?.session || null;
+    setSession(sess);
+    if (sess) await loadProfileSafe(sess);
+    return sess;
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -452,6 +477,7 @@ export function AuthProvider({ children }) {
         resendOtp,
         logout,
         refresh,
+        consumePasswordReset,
       }}
     >
       {children}

@@ -292,6 +292,7 @@ function ForgotPasswordOtp({ phone, onBack, onVerified }) {
     e.preventDefault();
     setError('');
     setBusy(true);
+    sessionStorage.setItem('pendingPasswordReset', 'true');
     console.log('[ForgotPasswordOtp] verifying', { phone, codeLength: code.length });
     const verifyResult = await supabase.auth.verifyOtp({
       phone,
@@ -318,6 +319,7 @@ function ForgotPasswordOtp({ phone, onBack, onVerified }) {
       )
     );
     if (verifyResult.error) {
+      sessionStorage.removeItem('pendingPasswordReset');
       setError('Invalid code. Please try again.');
       return;
     }
@@ -375,6 +377,7 @@ function ForgotPasswordOtp({ phone, onBack, onVerified }) {
 
 function SetNewPassword() {
   const navigate = useNavigate();
+  const { consumePasswordReset } = useAuth();
   const [pw, setPw] = useState('');
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
@@ -397,8 +400,12 @@ function SetNewPassword() {
     if (!match) return setError('Passwords do not match.');
     setBusy(true);
     const { error: updateError } = await supabase.auth.updateUser({ password: pw });
+    if (updateError) {
+      setBusy(false);
+      return setError(updateError.message);
+    }
+    await consumePasswordReset();
     setBusy(false);
-    if (updateError) return setError(updateError.message);
     setSuccess('Password updated.');
     setTimeout(() => navigate('/home'), 800);
   }
