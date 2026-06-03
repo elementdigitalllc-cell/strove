@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
-import { getFeedPosts, getFollowing, getRepostCountsByPost } from '../lib/sdb';
+import {
+  getFeedPosts,
+  getFollowing,
+  getRepostCountsByPost,
+  follow,
+  unfollow,
+  createNotification,
+} from '../lib/sdb';
 import PostCard from '../components/PostCard';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
 import { LoadingBlock, ErrorBlock } from '../components/ui/States';
@@ -9,7 +16,7 @@ export default function Feed() {
   const { user } = useAuth();
   const [tab, setTab] = useState('discover');
   const [posts, setPosts] = useState([]);
-  const [following, setFollowing] = useState([]);
+  const [followingSet, setFollowingSet] = useState(() => new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -24,7 +31,6 @@ export default function Feed() {
       setError(postsResult.error);
     } else {
       const fetched = postsResult.data || [];
-      // Count reposts from the junction table and merge into each post.
       const ids = fetched.map((p) => p.id);
       const { data: repostCounts } = await getRepostCountsByPost(ids);
       const merged = fetched.map((p) => ({
@@ -33,18 +39,43 @@ export default function Feed() {
       }));
       setPosts(merged);
     }
-    setFollowing(followsResult.data || []);
+    setFollowingSet(new Set(followsResult.data || []));
     setLoading(false);
   }, [user]);
 
   useEffect(() => { load(); }, [load]);
 
+  async function toggleFollow(targetId) {
+    if (!user || targetId === user.id) return;
+    const isFollowing = followingSet.has(targetId);
+    if (isFollowing) {
+      const { error: e } = await unfollow(user.id, targetId);
+      if (e) return;
+      setFollowingSet((prev) => {
+        const next = new Set(prev);
+        next.delete(targetId);
+        return next;
+      });
+    } else {
+      const { error: e } = await follow(user.id, targetId);
+      if (e) return;
+      setFollowingSet((prev) => {
+        const next = new Set(prev);
+        next.add(targetId);
+        return next;
+      });
+      createNotification({ user_id: targetId, actor_id: user.id, type: 'follow' });
+    }
+  }
+
   const visible = useMemo(() => {
     if (tab === 'following') {
-      return posts.filter((p) => following.includes(p.user_id) || p.user_id === user?.id);
+      return posts.filter(
+        (p) => followingSet.has(p.user_id) || p.user_id === user?.id
+      );
     }
     return posts;
-  }, [posts, following, tab, user]);
+  }, [posts, followingSet, tab, user]);
 
   return (
     <div className="-mx-4">
@@ -58,7 +89,7 @@ export default function Feed() {
           {loading ? <LoadingBlock label="Loading feed…" /> : error ? (
             <div className="mx-4"><ErrorBlock error={error} onRetry={load} /></div>
           ) : (
-            <FeedList posts={visible} tab={tab} />
+            <FeedList posts={visible} tab={tab} followingSet={followingSet} onToggleFollow={toggleFollow} />
           )}
         </TabsContent>
 
@@ -66,7 +97,7 @@ export default function Feed() {
           {loading ? <LoadingBlock label="Loading feed…" /> : error ? (
             <div className="mx-4"><ErrorBlock error={error} onRetry={load} /></div>
           ) : (
-            <FeedList posts={visible} tab={tab} />
+            <FeedList posts={visible} tab={tab} followingSet={followingSet} onToggleFollow={toggleFollow} />
           )}
         </TabsContent>
       </Tabs>
@@ -74,7 +105,7 @@ export default function Feed() {
   );
 }
 
-function FeedList({ posts, tab }) {
+function FeedList({ posts, tab, followingSet, onToggleFollow }) {
   if (posts.length === 0) {
     return (
       <div className="mx-4 mt-6 rounded border border-border bg-card p-9 text-center flex flex-col items-center gap-2">
@@ -86,5 +117,16 @@ function FeedList({ posts, tab }) {
       </div>
     );
   }
-  return <div>{posts.map((p) => <PostCard key={p.id} post={p} />)}</div>;
+  return (
+    <div>
+      {posts.map((p) => (
+        <PostCard
+          key={p.feed_id || p.id}
+          post={p}
+          isFollowing={followingSet.has(p.user_id)}
+          onToggleFollow={onToggleFollow}
+        />
+      ))}
+    </div>
+  );
 }

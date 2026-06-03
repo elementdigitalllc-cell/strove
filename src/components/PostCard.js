@@ -4,9 +4,6 @@ import { MessageCircle, Repeat2, Heart, Eye, Share, Bookmark } from 'lucide-reac
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../supabaseClient';
 import {
-  follow,
-  unfollow,
-  getFollowing,
   listComments,
   createComment,
   savePost,
@@ -43,10 +40,9 @@ function formatCount(n) {
 }
 
 
-export default function PostCard({ post: initial }) {
+export default function PostCard({ post: initial, isFollowing, onToggleFollow }) {
   const { user } = useAuth();
   const [post, setPost] = useState(initial);
-  const [following, setFollowing] = useState(false);
   const [liked, setLiked] = useState(false);
   const [reposted, setReposted] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -77,20 +73,18 @@ export default function PostCard({ post: initial }) {
     let cancelled = false;
     (async () => {
       if (!user) return;
-      const [followsRes, savedRes, likedRes, repostedRes] = await Promise.all([
-        getFollowing(user.id),
+      const [savedRes, likedRes, repostedRes] = await Promise.all([
         getSavedPostIds(user.id),
         getLikedPostIds(user.id),
         getRepostedOriginalIds(user.id),
       ]);
       if (cancelled) return;
-      setFollowing(followsRes.data.includes(post.user_id));
       setSaved((savedRes.data || []).includes(post.id));
       setLiked((likedRes.data || []).includes(post.id));
       setReposted((repostedRes.data || []).includes(post.id));
     })();
     return () => { cancelled = true; };
-  }, [user, post.user_id, post.id]);
+  }, [user, post.id]);
 
   async function tapLike() {
     if (!user) return;
@@ -176,14 +170,8 @@ export default function PostCard({ post: initial }) {
     }
   }
 
-  async function toggleFollow() {
-    if (following) {
-      await unfollow(user.id, post.user_id);
-      setFollowing(false);
-    } else {
-      await follow(user.id, post.user_id);
-      setFollowing(true);
-    }
+  function toggleFollow() {
+    if (onToggleFollow) onToggleFollow(post.user_id);
   }
 
   const author = post.profiles || {};
@@ -208,7 +196,19 @@ export default function PostCard({ post: initial }) {
   );
 
   return (
-    <article ref={articleRef} className="flex gap-3 px-4 py-4 border-b border-border">
+    <article ref={articleRef} className="flex flex-col px-4 py-4 border-b border-border">
+      {post.repost_by ? (
+        <div className="flex items-center gap-1.5 text-[12px] text-muted font-medium mb-1.5 pl-12">
+          <Repeat2 size={13} strokeWidth={2} className="text-emerald-400" />
+          <span>
+            Reposted by{' '}
+            <Link to={'/profile/' + post.repost_by.id} className="hover:underline text-fg font-semibold">
+              @{post.repost_by.username}
+            </Link>
+          </span>
+        </div>
+      ) : null}
+      <div className="flex gap-3">
       <Link to={'/profile/' + post.user_id}>
         <Avatar name={displayName} size="md" />
       </Link>
@@ -224,12 +224,12 @@ export default function PostCard({ post: initial }) {
               onClick={toggleFollow}
               className={cn(
                 'ml-auto px-3 py-1 text-xs font-bold rounded transition-colors',
-                following
+                isFollowing
                   ? 'bg-transparent text-muted border border-border hover:text-rose-300 hover:border-rose-500/40'
                   : 'bg-fg text-bg hover:brightness-95'
               )}
             >
-              {following ? 'Following' : 'Follow'}
+              {isFollowing ? 'Following' : 'Follow'}
             </button>
           ) : null}
         </header>
@@ -292,6 +292,7 @@ export default function PostCard({ post: initial }) {
             ) : null}
           </div>
         ) : null}
+      </div>
       </div>
     </article>
   );

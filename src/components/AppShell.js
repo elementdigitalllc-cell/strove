@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { Home, Trophy, Plus, Lock, User, Bell, MessageSquare } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
+import { getUnreadNotificationCount } from '../lib/sdb';
 import BrandLogo from './BrandLogo';
 import { cn } from '../lib/cn';
 
@@ -23,10 +25,23 @@ const TITLES = {
 export default function AppShell() {
   const { user, profileError } = useAuth();
   const location = useLocation();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const key = location.pathname.startsWith('/profile') ? '/profile' : location.pathname;
   const title = TITLES[key] || 'Strove';
   const fallback = user?.__isFallback;
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    async function refresh() {
+      const { count } = await getUnreadNotificationCount(user.id);
+      if (!cancelled) setUnreadCount(count);
+    }
+    refresh();
+    const t = setInterval(refresh, 30_000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [user?.id, location.pathname]);
 
   return (
     <div className="relative mx-auto max-w-[520px] min-h-dvh bg-bg flex flex-col">
@@ -36,8 +51,13 @@ export default function AppShell() {
           <span className="text-[17px] font-bold tracking-tight">{title}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <NavLink to="/notifications" aria-label="Notifications" className="h-8 w-8 grid place-items-center rounded text-muted hover:text-fg hover:bg-card transition-colors">
+          <NavLink to="/notifications" aria-label="Notifications" className="relative h-8 w-8 grid place-items-center rounded text-muted hover:text-fg hover:bg-card transition-colors">
             <Bell size={18} strokeWidth={1.8} />
+            {unreadCount > 0 ? (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-orange text-black text-[10px] font-bold grid place-items-center leading-none">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            ) : null}
           </NavLink>
           <NavLink to="/messages" aria-label="Messages" className="h-8 w-8 grid place-items-center rounded text-muted hover:text-fg hover:bg-card transition-colors">
             <MessageSquare size={18} strokeWidth={1.8} />

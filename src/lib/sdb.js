@@ -50,12 +50,83 @@ export async function updateProfile(userId, patch) {
 /* ============ Posts ============ */
 
 export async function getFeedPosts(limit = 50) {
-  const { data, error } = await supabase
-    .from('posts')
-    .select('*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count)')
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  return { data: data || [], error };
+  // Pull originals + reposts in parallel and stitch into a single, sorted feed.
+  const [postsRes, repostsRes] = await Promise.all([
+    supabase
+      .from('posts')
+      .select('*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count)')
+      .order('created_at', { ascending: false })
+      .limit(limit),
+    supabase
+      .from('reposts')
+      .select('user_id, post_id, created_at')
+      .order('created_at', { ascending: false })
+      .limit(limit),
+  ]);
+
+  if (postsRes.error) return { data: [], error: postsRes.error };
+
+  const posts = postsRes.data || [];
+  const reposts = repostsRes.data || [];
+
+  // Fetch any posts referenced by reposts that we don't already have, plus
+  // profile rows for the reposters themselves.
+  const knownPostIds = new Set(posts.map((p) => p.id));
+  const missingPostIds = [
+    ...new Set(reposts.map((r) => r.post_id).filter((id) => !knownPostIds.has(id))),
+  ];
+  const reposterIds = [...new Set(reposts.map((r) => r.user_id))];
+
+  const [missingPostsRes, reposterProfilesRes] = await Promise.all([
+    missingPostIds.length
+      ? supabase
+          .from('posts')
+          .select('*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count)')
+          .in('id', missingPostIds)
+      : Promise.resolve({ data: [] }),
+    reposterIds.length
+      ? supabase
+          .from('profiles')
+          .select('id, username, full_name, streak_count')
+          .in('id', reposterIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const postMap = new Map();
+  for (const p of posts) postMap.set(p.id, p);
+  for (const p of missingPostsRes.data || []) postMap.set(p.id, p);
+  const profileMap = new Map();
+  for (const p of reposterProfilesRes.data || []) profileMap.set(p.id, p);
+
+  const repostItems = reposts
+    .map((r) => {
+      const original = postMap.get(r.post_id);
+      if (!original) return null;
+      return {
+        ...original,
+        feed_id: `repost-${r.user_id}-${r.post_id}`,
+        is_repost: true,
+        repost_by: profileMap.get(r.user_id) || null,
+        repost_at: r.created_at,
+        display_at: r.created_at,
+      };
+    })
+    .filter(Boolean);
+
+  const postItems = posts.map((p) => ({
+    ...p,
+    feed_id: p.id,
+    is_repost: false,
+    repost_by: null,
+    repost_at: null,
+    display_at: p.created_at,
+  }));
+
+  const combined = [...postItems, ...repostItems]
+    .sort((a, b) => new Date(b.display_at) - new Date(a.display_at))
+    .slice(0, limit);
+
+  return { data: combined, error: null };
 }
 
 export async function getPostsByUser(userId) {
@@ -74,6 +145,46 @@ export async function createPost({ user_id, content }) {
     .select('*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count)')
     .single();
   return { data, error };
+}
+
+/* ============ Notifications ============ */
+
+export async function createNotification({ user_id, actor_id, type, post_id = null }) {
+  if (!user_id || !actor_id || user_id === actor_id) return { error: null };
+  const { error } = await supabase
+    .from('notifications')
+    .insert({ user_id, actor_id, type, post_id });
+  if (error) console.error('[sdb.createNotification] error:', error);
+  return { error };
+}
+
+export async function getMyNotifications(userId, limit = 50) {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*, actor:profiles!notifications_actor_id_fkey (id, username, full_name)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  return { data: data || [], error };
+}
+
+export async function getUnreadNotificationCount(userId) {
+  if (!userId) return { count: 0, error: null };
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('is_read', false);
+  return { count: count || 0, error };
+}
+
+export async function markAllNotificationsRead(userId) {
+  const { error } = await supabase
+    .from('notifications')
+    .update({ is_read: true })
+    .eq('user_id', userId)
+    .eq('is_read', false);
+  return { error };
 }
 
 /* ============ Likes ============ */
