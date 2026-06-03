@@ -254,7 +254,10 @@ export default function Landing() {
         </div>
       </main>
 
-      <footer className="border-t border-[#0f0f0f] relative z-10 mt-20">
+      <footer
+        className="border-t border-[#0f0f0f] relative z-[50] mt-20"
+        style={{ backgroundColor: 'red' }}
+      >
         <div className="max-w-[1280px] mx-auto px-6 lg:px-12 py-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13px] text-[#71717a]">
           {FOOTER_LINKS.map((l) => (
             <button
