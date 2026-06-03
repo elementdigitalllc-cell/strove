@@ -237,40 +237,25 @@ export async function markAllNotificationsRead(userId) {
 
 /* ============ Likes ============ */
 
-async function changePostCount(postId, field, delta) {
-  const { error } = await supabase.rpc('change_post_count', {
-    post_id: postId,
-    field,
-    delta,
-  });
-  if (error) console.error('[sdb.changePostCount] error:', error);
-  return { error };
-}
-
 export async function likePost(userId, postId) {
+  // posts.likes is bumped by the likes_count_ins trigger. Do not double-count
+  // by calling change_post_count here.
   const { error } = await supabase
     .from('likes')
     .insert({ user_id: userId, post_id: postId });
-  if (error) {
-    console.error('[sdb.likePost] insert error:', error);
-    return { error };
-  }
-  await changePostCount(postId, 'likes', 1);
-  return { error: null };
+  if (error) console.error('[sdb.likePost] insert error:', error);
+  return { error };
 }
 
 export async function unlikePost(userId, postId) {
+  // posts.likes is decremented by the likes_count_del trigger.
   const { error } = await supabase
     .from('likes')
     .delete()
     .eq('user_id', userId)
     .eq('post_id', postId);
-  if (error) {
-    console.error('[sdb.unlikePost] delete error:', error);
-    return { error };
-  }
-  await changePostCount(postId, 'likes', -1);
-  return { error: null };
+  if (error) console.error('[sdb.unlikePost] delete error:', error);
+  return { error };
 }
 
 export async function getLikedPostIds(userId) {
