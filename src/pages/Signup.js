@@ -243,6 +243,7 @@ function OtpScreen({
     return () => clearInterval(t);
   }, [resendIn, setResendIn]);
 
+  const codeLength = channel === 'phone' ? 6 : 8;
   const title = channel === 'phone' ? 'Check your phone' : 'Check your email';
   const subtitle =
     channel === 'phone'
@@ -265,7 +266,7 @@ function OtpScreen({
         <p className="mt-2 text-[14px] text-zinc-500">{subtitle}</p>
 
         <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-5">
-          <OtpBoxes code={code} setCode={setCode} hasError={!!error} length={8} />
+          <OtpBoxes code={code} setCode={setCode} hasError={!!error} length={codeLength} />
 
           {error ? (
             <p className="text-[13px] text-rose-400 -mt-1">{error}</p>
@@ -277,7 +278,7 @@ function OtpScreen({
 
           <button
             type="submit"
-            disabled={busy || code.length !== 8}
+            disabled={busy || code.length !== codeLength}
             className="mt-1 w-full h-12 rounded-[8px] bg-orange text-black text-[15px] font-semibold transition hover:brightness-110 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {busy ? 'Verifying…' : 'Verify'}
