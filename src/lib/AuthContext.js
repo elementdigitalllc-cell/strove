@@ -158,9 +158,7 @@ export function AuthProvider({ children }) {
   }
 
   function normalizePhone(raw) {
-    const stripped = (raw || '').replace(/[^\d+]/g, '');
-    if (stripped.startsWith('+')) return stripped;
-    const digits = stripped.replace(/\D/g, '');
+    const digits = (raw || '').replace(/\D/g, '');
     if (digits.length === 10) return '+1' + digits;
     if (digits.length === 11 && digits.startsWith('1')) return '+' + digits;
     return '+' + digits;
