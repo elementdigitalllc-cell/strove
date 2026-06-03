@@ -156,6 +156,23 @@ export async function getRepostedOriginalIds(userId) {
   return { data: (data || []).map((r) => r.post_id), error };
 }
 
+export async function getRepostCountsByPost(postIds) {
+  if (!postIds || postIds.length === 0) return { data: {}, error: null };
+  const { data, error } = await supabase
+    .from('reposts')
+    .select('post_id')
+    .in('post_id', postIds);
+  if (error) {
+    console.error('[sdb.getRepostCountsByPost] error:', error);
+    return { data: {}, error };
+  }
+  const counts = {};
+  for (const row of data || []) {
+    counts[row.post_id] = (counts[row.post_id] || 0) + 1;
+  }
+  return { data: counts, error: null };
+}
+
 export async function bumpViewsBatch(postIds) {
   if (!postIds || postIds.length === 0) return { error: null };
   const { error } = await supabase.rpc('bump_views_batch', { post_ids: postIds });

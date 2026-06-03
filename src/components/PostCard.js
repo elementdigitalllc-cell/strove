@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageCircle, Repeat2, Heart, Eye, Share, Bookmark } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
+import { supabase } from '../supabaseClient';
 import {
   follow,
   unfollow,
@@ -57,6 +58,20 @@ export default function PostCard({ post: initial }) {
   const articleRef = useRef(null);
 
   useEffect(() => setPost(initial), [initial]);
+
+  // Views: bump exactly once on mount. Requires RLS to allow non-owner
+  // UPDATE on posts.views (see supabase-views-policy.sql).
+  useEffect(() => {
+    supabase
+      .from('posts')
+      .update({ views: (initial.views || 0) + 1 })
+      .eq('id', initial.id)
+      .then(({ error }) => {
+        if (error) console.error('[PostCard.view] update error:', error);
+        else setPost((p) => ({ ...p, views: (p.views || 0) + 1 }));
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
