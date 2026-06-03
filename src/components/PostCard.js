@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageCircle, Repeat2, Heart, Eye, Share, Bookmark } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
+import { supabase } from '../supabaseClient';
 import {
   bumpPostInt,
   follow,
@@ -15,7 +16,6 @@ import {
   likePost,
   unlikePost,
   getLikedPostIds,
-  repostPost,
   unrepost,
   getRepostedOriginalIds,
 } from '../lib/sdb';
@@ -60,7 +60,6 @@ export default function PostCard({ post: initial }) {
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [shareNote, setShareNote] = useState('');
   const articleRef = useRef(null);
-  const viewedRef = useRef(false);
 
   useEffect(() => setPost(initial), [initial]);
 
@@ -83,28 +82,30 @@ export default function PostCard({ post: initial }) {
     return () => { cancelled = true; };
   }, [user, post.user_id, post.id]);
 
+  // Views: 2-second-on-mount timer. Module-level Set dedupes per session.
+  // Owner's own posts don't count. RLS blocks a direct posts.update from a
+  // non-owner, so the bump runs through the security-definer bump_post RPC.
   useEffect(() => {
-    if (!articleRef.current || !user || post.user_id === user.id) return;
+    if (!user || post.user_id === user.id) return;
     if (viewedThisSession.has(post.id)) return;
-    const obs = new IntersectionObserver((entries) => {
-      entries.forEach(async (e) => {
-        if (e.isIntersecting && !viewedRef.current) {
-          viewedRef.current = true;
-          viewedThisSession.add(post.id);
-          console.log('[PostCard.view] bumping views for', post.id);
-          const { data, error } = await bumpPostInt(post.id, 'views');
-          if (error) {
-            console.error('[PostCard.view] bumpPostInt error:', error);
-          } else {
-            console.log('[PostCard.view] new views =', data?.views);
-            if (data) setPost((p) => ({ ...p, views: data.views }));
-          }
-          obs.disconnect();
-        }
-      });
-    }, { threshold: 0.5 });
-    obs.observe(articleRef.current);
-    return () => obs.disconnect();
+    const mounted = { current: true };
+    const t = setTimeout(async () => {
+      if (!mounted.current) return;
+      if (viewedThisSession.has(post.id)) return;
+      viewedThisSession.add(post.id);
+      console.log('[PostCard.view] bumping views for', post.id);
+      const { data, error } = await bumpPostInt(post.id, 'views');
+      if (error) {
+        console.error('[PostCard.view] bumpPostInt error:', error);
+        return;
+      }
+      console.log('[PostCard.view] new views =', data?.views);
+      if (mounted.current && data) setPost((p) => ({ ...p, views: data.views }));
+    }, 2000);
+    return () => {
+      mounted.current = false;
+      clearTimeout(t);
+    };
   }, [post.id, post.user_id, user]);
 
   async function tapLike() {
@@ -123,28 +124,50 @@ export default function PostCard({ post: initial }) {
   }
 
   async function tapRepost() {
-    console.log('[PostCard.tapRepost] called', { user: user?.id, postId: post.id, reposted });
+    console.log('[PostCard.tapRepost] clicked', { userId: user?.id, postId: post.id, reposted });
     if (!user) {
       console.warn('[PostCard.tapRepost] no user; aborting');
       return;
     }
+
+    // Unrepost path
     if (reposted) {
       const { error } = await unrepost(user.id, post.id);
-      console.log('[PostCard.tapRepost] unrepost result error =', error);
+      console.log('[PostCard.tapRepost] unrepost error =', error);
       if (error) return;
       setReposted(false);
       setPost((p) => ({ ...p, reposts: Math.max((p.reposts || 0) - 1, 0) }));
-    } else {
-      const { data, error } = await repostPost({
-        user_id: user.id,
-        original_post_id: post.id,
-        content: post.content || '',
-      });
-      console.log('[PostCard.tapRepost] repost result', { data, error });
-      if (error) return;
-      setReposted(true);
-      setPost((p) => ({ ...p, reposts: (p.reposts || 0) + 1 }));
+      return;
     }
+
+    // Repost path: insert new posts row, then bump original's reposts count.
+    const insertPayload = {
+      user_id: user.id,
+      content: post.content || '',
+      original_post_id: post.id,
+      is_repost: true,
+    };
+    console.log('[PostCard.tapRepost] inserting repost row', insertPayload);
+    const { data: inserted, error: insertError } = await supabase
+      .from('posts')
+      .insert(insertPayload)
+      .select('id')
+      .single();
+    if (insertError) {
+      console.error('[PostCard.tapRepost] insert error:', insertError);
+      return;
+    }
+    console.log('[PostCard.tapRepost] inserted repost id =', inserted?.id);
+
+    const { error: bumpError } = await supabase.rpc('change_post_count', {
+      post_id: post.id,
+      field: 'reposts',
+      delta: 1,
+    });
+    if (bumpError) console.error('[PostCard.tapRepost] bump error:', bumpError);
+
+    setReposted(true);
+    setPost((p) => ({ ...p, reposts: (p.reposts || 0) + 1 }));
   }
 
   async function tapSave() {
@@ -216,6 +239,7 @@ export default function PostCard({ post: initial }) {
 
   const Action = ({ icon: Icon, value, active, color, onClick, ariaLabel }) => (
     <button
+      type="button"
       onClick={onClick}
       aria-label={ariaLabel}
       className={cn(
