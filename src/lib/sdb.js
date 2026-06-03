@@ -344,6 +344,23 @@ export async function createComment({ post_id, user_id, content }) {
   return { data, error };
 }
 
+export async function getCommentCountsByPost(postIds) {
+  if (!postIds || postIds.length === 0) return { data: {}, error: null };
+  const { data, error } = await supabase
+    .from('comments')
+    .select('post_id')
+    .in('post_id', postIds);
+  if (error) {
+    console.error('[sdb.getCommentCountsByPost] error:', error);
+    return { data: {}, error };
+  }
+  const counts = {};
+  for (const row of data || []) {
+    counts[row.post_id] = (counts[row.post_id] || 0) + 1;
+  }
+  return { data: counts, error: null };
+}
+
 export async function deleteComment(commentId) {
   const { error } = await supabase.from('comments').delete().eq('id', commentId);
   return { error };

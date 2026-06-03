@@ -4,6 +4,7 @@ import {
   getFeedPosts,
   getFollowing,
   getRepostCountsByPost,
+  getCommentCountsByPost,
   getLikedPostIds,
   follow,
   unfollow,
@@ -34,11 +35,15 @@ export default function Feed() {
     } else {
       const fetched = postsResult.data || [];
       const ids = fetched.map((p) => p.id);
-      const { data: repostCounts } = await getRepostCountsByPost(ids);
+      const [{ data: repostCounts }, { data: commentCounts }] = await Promise.all([
+        getRepostCountsByPost(ids),
+        getCommentCountsByPost(ids),
+      ]);
       const likedSet = new Set(likedResult.data || []);
       const merged = fetched.map((p) => ({
         ...p,
         reposts: repostCounts[p.id] || 0,
+        comments: commentCounts[p.id] || 0,
         currentUserLiked: likedSet.has(p.id),
       }));
       setPosts(merged);
