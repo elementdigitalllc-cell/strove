@@ -211,22 +211,22 @@ export function AuthProvider({ children }) {
   async function verifyOtp({ channel, identifier, token }) {
     const code = (token || '').trim();
     if (!/^\d{6}$/.test(code)) {
-      return { ok: false, error: 'Enter the 6-digit code.' };
+      return { ok: false, error: 'Invalid code. Please try again.' };
     }
     try {
       const payload =
         channel === 'phone'
           ? { phone: identifier, token: code, type: 'sms' }
-          : { email: identifier, token: code, type: 'email' };
+          : { email: identifier, token: code, type: 'signup' };
       const { data, error } = await supabase.auth.verifyOtp(payload);
-      if (error) return { ok: false, error: error.message };
+      if (error) return { ok: false, error: 'Invalid code. Please try again.' };
       if (data.session) {
         setSession(data.session);
         await loadProfileSafe(data.session);
       }
       return { ok: true };
     } catch (err) {
-      return { ok: false, error: err?.message || 'Verification failed.' };
+      return { ok: false, error: 'Invalid code. Please try again.' };
     }
   }
 
