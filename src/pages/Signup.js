@@ -1,8 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Check, X } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import LegalModal from '../components/LegalModal';
 import BackArrow from '../components/BackArrow';
+
+const PASSWORD_RULES = [
+  { id: 'len', label: 'At least 8 characters', test: (p) => p.length >= 8 },
+  { id: 'upper', label: 'One uppercase letter', test: (p) => /[A-Z]/.test(p) },
+  { id: 'lower', label: 'One lowercase letter', test: (p) => /[a-z]/.test(p) },
+  { id: 'num', label: 'One number', test: (p) => /\d/.test(p) },
+  { id: 'special', label: 'One special character (!@#$%^&…)', test: (p) => /[^A-Za-z0-9]/.test(p) },
+];
+
+function evaluatePassword(p) {
+  return PASSWORD_RULES.map((r) => ({ ...r, met: r.test(p) }));
+}
 
 export default function Signup() {
   const { signup, verifyOtp, resendOtp } = useAuth();
@@ -28,9 +41,15 @@ export default function Signup() {
 
   const update = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
+  const passwordChecks = useMemo(() => evaluatePassword(form.password), [form.password]);
+  const passwordValid = passwordChecks.every((c) => c.met);
+
   async function submit(e) {
     e.preventDefault();
     setError('');
+    if (!passwordValid) {
+      return setError('Password does not meet the requirements below.');
+    }
     setBusy(true);
     const result = await signup({
       fullName: form.fullName,
@@ -135,6 +154,7 @@ export default function Signup() {
               value={form.password}
               onChange={(e) => update('password', e.target.value)}
             />
+            <PasswordChecklist checks={passwordChecks} show={form.password.length > 0} />
           </LabeledField>
 
           <LabeledField label="Full name">
@@ -183,7 +203,7 @@ export default function Signup() {
 
           <button
             type="submit"
-            disabled={busy}
+            disabled={busy || !passwordValid}
             className="mt-2 w-full h-12 rounded-[8px] bg-orange text-black text-[15px] font-semibold transition hover:brightness-110 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {busy ? 'Creating account…' : 'Create account'}
@@ -226,8 +246,8 @@ function OtpScreen({
   const title = channel === 'phone' ? 'Check your phone' : 'Check your email';
   const subtitle =
     channel === 'phone'
-      ? `We sent a 6-digit code by SMS to ${identifier}. Enter it below to complete your signup.`
-      : `We sent a 6-digit code to ${identifier}. Enter it below to complete your signup.`;
+      ? 'We sent a code to your phone number via SMS. Enter it below.'
+      : `We sent a code to ${identifier}. Enter it below to complete your signup.`;
   const changeLabel = channel === 'phone' ? 'Wrong number? Go back' : 'Wrong email? Go back';
 
   return (
@@ -357,6 +377,24 @@ function OtpBoxes({ code, setCode, hasError, length = 8 }) {
         />
       ))}
     </div>
+  );
+}
+
+function PasswordChecklist({ checks, show }) {
+  if (!show) return null;
+  return (
+    <ul className="mt-2 space-y-1">
+      {checks.map((c) => (
+        <li key={c.id} className="flex items-center gap-2 text-[12px]">
+          {c.met ? (
+            <Check size={14} className="text-emerald-400 shrink-0" strokeWidth={3} />
+          ) : (
+            <X size={14} className="text-zinc-500 shrink-0" strokeWidth={2.5} />
+          )}
+          <span className={c.met ? 'text-emerald-400' : 'text-zinc-500'}>{c.label}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 

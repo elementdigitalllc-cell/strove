@@ -162,13 +162,30 @@ export function AuthProvider({ children }) {
     return cleaned.startsWith('+') ? cleaned : '+' + cleaned;
   }
 
+  const SMS_UNAVAILABLE_MSG =
+    'SMS verification is coming soon. Please sign up with an email address instead.';
+
+  function isSmsProviderError(message = '') {
+    return /provider|sms|twilio|messagebird|vonage|not enabled|not configured|disabled|signups not allowed|unsupported phone/i.test(
+      message
+    );
+  }
+
+  function passwordPolicyError(p) {
+    if (p.length < 8) return 'Password must be at least 8 characters.';
+    if (!/[A-Z]/.test(p)) return 'Password must include an uppercase letter.';
+    if (!/[a-z]/.test(p)) return 'Password must include a lowercase letter.';
+    if (!/\d/.test(p)) return 'Password must include a number.';
+    if (!/[^A-Za-z0-9]/.test(p)) return 'Password must include a special character.';
+    return null;
+  }
+
   async function signup({ fullName, contact, username, password }) {
     if (!fullName || !contact || !username || !password) {
       return { ok: false, error: 'Full name, contact, username, and password are required.' };
     }
-    if (password.length < 6) {
-      return { ok: false, error: 'Password must be at least 6 characters.' };
-    }
+    const pwError = passwordPolicyError(password);
+    if (pwError) return { ok: false, error: pwError };
 
     const channel = detectChannel(contact);
     if (!channel) {
@@ -194,7 +211,12 @@ export function AuthProvider({ children }) {
       }
 
       const { data, error } = await supabase.auth.signUp(payload);
-      if (error) return { ok: false, error: error.message };
+      if (error) {
+        if (channel === 'phone' && isSmsProviderError(error.message)) {
+          return { ok: false, error: SMS_UNAVAILABLE_MSG };
+        }
+        return { ok: false, error: error.message };
+      }
       if (!data.user) return { ok: false, error: 'Sign-up failed — no user returned.' };
 
       if (data.session) {
@@ -204,7 +226,11 @@ export function AuthProvider({ children }) {
       }
       return { ok: true, verified: false, channel, identifier };
     } catch (err) {
-      return { ok: false, error: err?.message || 'Sign-up failed.' };
+      const msg = err?.message || 'Sign-up failed.';
+      if (channel === 'phone' && isSmsProviderError(msg)) {
+        return { ok: false, error: SMS_UNAVAILABLE_MSG };
+      }
+      return { ok: false, error: msg };
     }
   }
 
@@ -237,10 +263,19 @@ export function AuthProvider({ children }) {
           ? { type: 'sms', phone: identifier }
           : { type: 'signup', email: identifier };
       const { error } = await supabase.auth.resend(payload);
-      if (error) return { ok: false, error: error.message };
+      if (error) {
+        if (channel === 'phone' && isSmsProviderError(error.message)) {
+          return { ok: false, error: SMS_UNAVAILABLE_MSG };
+        }
+        return { ok: false, error: error.message };
+      }
       return { ok: true };
     } catch (err) {
-      return { ok: false, error: err?.message || 'Could not resend code.' };
+      const msg = err?.message || 'Could not resend code.';
+      if (channel === 'phone' && isSmsProviderError(msg)) {
+        return { ok: false, error: SMS_UNAVAILABLE_MSG };
+      }
+      return { ok: false, error: msg };
     }
   }
 
