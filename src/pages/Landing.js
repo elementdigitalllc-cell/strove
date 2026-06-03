@@ -170,7 +170,7 @@ const FOOTER_LINKS = [
   { key: 'terms', label: 'Terms', title: 'Terms of service', body: TERMS_BODY },
 ];
 
-// Bare image — mix-blend-mode lighten erases the PNG's baked-in black square
+// Bare image — mix-blend-mode: screen erases the PNG's baked-in black square
 // so the flame blends seamlessly on any black/near-black surface.
 function LogoImg({ size = 28, className = '' }) {
   return (
@@ -187,7 +187,7 @@ function LogoImg({ size = 28, className = '' }) {
         borderRadius: 0,
         boxShadow: 'none',
         padding: 0,
-        mixBlendMode: 'lighten',
+        mixBlendMode: 'screen',
       }}
     />
   );
@@ -329,6 +329,21 @@ function PhoneTopBar({ avatarColor = '#f97316', avatarLabel = 'A' }) {
   );
 }
 
+function FakeTabs() {
+  return (
+    <div
+      className="flex border-b border-[#1a1a1a] px-4 select-none"
+      style={{ pointerEvents: 'none' }}
+    >
+      <div className="relative flex-1 py-2 text-[12px] font-semibold text-white text-center">
+        Discover
+        <span className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[2px] w-6 bg-orange" />
+      </div>
+      <div className="flex-1 py-2 text-[12px] font-semibold text-[#71717a] text-center">Following</div>
+    </div>
+  );
+}
+
 function PhoneBottomNav({ activeKey }) {
   return (
     <nav className="border-t border-[#1a1a1a] grid grid-cols-5 gap-1 px-2 pt-1.5 pb-2">
@@ -368,14 +383,7 @@ function FrontPhone() {
       <PhoneFrame width={320} height={680} className="relative">
         <PhoneTopBar avatarColor="#f97316" avatarLabel="A" />
 
-        {/* Tabs */}
-        <div className="flex border-b border-[#1a1a1a] px-4">
-          <button className="relative flex-1 py-2 text-[12px] font-semibold text-white">
-            Discover
-            <span className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[2px] w-6 bg-orange" />
-          </button>
-          <button className="flex-1 py-2 text-[12px] font-semibold text-[#71717a]">Following</button>
-        </div>
+        <FakeTabs />
 
         {/* Feed — 5 items: 4 posts + 1 poll, mixed types */}
         <div className="flex-1 px-3 overflow-hidden">
@@ -464,7 +472,7 @@ function PollPostRow({ post, divider }) {
 }
 
 /* ===========================================================
-   BACK PHONE — full Compete screen, "Strove" topbar, w/ nav
+   BACK PHONE — Compete: topbar, Discover/Following tabs, pot stack, nav
    =========================================================== */
 function BackPhone() {
   return (
@@ -472,46 +480,46 @@ function BackPhone() {
       className="absolute z-10 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.9)]"
       style={{ transform: 'translate(220px, 60px) rotate(15deg)' }}
     >
-      <PhoneFrame width={300} height={640} className="relative">
+      <PhoneFrame width={300} height={660} className="relative">
         <PhoneTopBar avatarColor="#3b82f6" avatarLabel="M" />
+        <FakeTabs />
 
-        <div className="flex-1 px-4 pt-4 pb-3 overflow-hidden">
-          <div className="rounded border border-[#1a1a1a] bg-[#0a0a0a] p-4 flex flex-col items-center gap-4">
-            <div className="text-[11px] uppercase tracking-[0.25em] text-[#71717a] font-bold">June 2026 Pot</div>
-            <div className="text-[52px] font-black tracking-tighter text-orange leading-none">
-              <span className="text-[24px] align-super font-bold mr-0.5">$</span>4,820
-            </div>
+        <div className="flex-1 px-4 pt-5 pb-3 flex flex-col items-center gap-4 overflow-hidden">
+          <div className="text-[11px] uppercase tracking-[0.25em] text-[#71717a] font-bold">June 2026 Pot</div>
+          <div className="text-[52px] font-black tracking-tighter text-orange leading-none">
+            <span className="text-[24px] align-super font-bold mr-0.5">$</span>4,820
+          </div>
 
-            <div className="w-full grid grid-cols-4 gap-1.5">
-              {[
-                { v: '12', l: 'DAYS' },
-                { v: '08', l: 'HRS' },
-                { v: '41', l: 'MIN' },
-                { v: '17', l: 'SEC' },
-              ].map((u) => (
-                <div key={u.l} className="rounded bg-[#111] py-2 text-center">
-                  <div className="text-[18px] font-black tabular-nums text-white leading-none">{u.v}</div>
-                  <div className="text-[8.5px] uppercase tracking-wider text-[#71717a] mt-0.5 font-bold">{u.l}</div>
-                </div>
-              ))}
-            </div>
+          <div className="w-full grid grid-cols-4 gap-1.5">
+            {[
+              { v: '12', l: 'DAYS' },
+              { v: '08', l: 'HRS' },
+              { v: '41', l: 'MIN' },
+              { v: '17', l: 'SEC' },
+            ].map((u) => (
+              <div key={u.l} className="rounded bg-[#111] py-2 text-center">
+                <div className="text-[18px] font-black tabular-nums text-white leading-none">{u.v}</div>
+                <div className="text-[8.5px] uppercase tracking-wider text-[#71717a] mt-0.5 font-bold">{u.l}</div>
+              </div>
+            ))}
+          </div>
 
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-emerald-500/15 border border-emerald-500/35 text-emerald-400 text-[10.5px] font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              Active · Day 47
-            </div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-emerald-500/15 border border-emerald-500/35 text-emerald-400 text-[10.5px] font-bold">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            Active · Day 47
+          </div>
 
-            <div
-              role="presentation"
-              className="h-11 w-full rounded bg-orange text-black text-[13.5px] font-bold grid place-items-center select-none cursor-default"
-            >
-              Enter the pot ($1)
-            </div>
+          <div
+            role="presentation"
+            className="h-11 w-full rounded bg-orange text-black text-[13.5px] font-bold grid place-items-center select-none"
+            style={{ pointerEvents: 'none', cursor: 'default' }}
+          >
+            Enter the pot ($1)
+          </div>
 
-            <div className="w-full flex flex-col items-center gap-1 pt-1 text-[10.5px] text-[#71717a] font-medium">
-              <span>847 competitors this month</span>
-              <span>🏆 Last winner took $3,240</span>
-            </div>
+          <div className="w-full flex flex-col items-center gap-0.5 pt-0.5 text-[10px] text-[#71717a] font-medium">
+            <span>847 competitors this month</span>
+            <span>🏆 Last winner took $3,240</span>
           </div>
         </div>
 
