@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Settings, Pencil } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import {
@@ -26,6 +26,7 @@ function fmtJoined(ts) {
 
 export default function Profile() {
   const { user: me, refresh, logout } = useAuth();
+  const navigate = useNavigate();
   const { id } = useParams();
   const targetId = id || me?.id;
 
@@ -168,7 +169,7 @@ export default function Profile() {
         }} />
       ) : null}
       {settingsOpen ? (
-        <SettingsModal user={target} onClose={() => setSettingsOpen(false)} onLogout={async () => { setSettingsOpen(false); await logout(); }} />
+        <SettingsModal user={target} onClose={() => setSettingsOpen(false)} onLogout={async () => { setSettingsOpen(false); await logout(); }} onOpenSupport={() => { setSettingsOpen(false); navigate('/support'); }} />
       ) : null}
     </div>
   );
@@ -227,7 +228,7 @@ function EditModal({ target, onClose, onSaved }) {
   );
 }
 
-function SettingsModal({ user, onClose, onLogout }) {
+function SettingsModal({ user, onClose, onLogout, onOpenSupport }) {
   return (
     <Modal title="Settings" onClose={onClose}>
       <Section title="Account">
@@ -236,6 +237,13 @@ function SettingsModal({ user, onClose, onLogout }) {
       <Section title="Privacy">
         <Row label="Journal">Private to you</Row>
       </Section>
+      <button
+        type="button"
+        onClick={onOpenSupport}
+        className="w-full text-left text-sm font-medium text-fg bg-bg/40 border border-border rounded px-3.5 py-3 hover:border-muted/60 transition-colors"
+      >
+        Help &amp; Support
+      </button>
       <div className="flex justify-end gap-2 mt-2">
         <Button size="sm" variant="outline" onClick={onClose}>Close</Button>
         <Button size="sm" variant="ghost" onClick={onLogout}>Log out</Button>

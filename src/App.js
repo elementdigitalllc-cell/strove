@@ -11,6 +11,7 @@ import Create from './pages/Create';
 import Profile from './pages/Profile';
 import Compete from './pages/Compete';
 import Journal from './pages/Journal';
+import Support from './pages/Support';
 import './App.css';
 
 function Protected({ children }) {
@@ -46,6 +47,7 @@ export default function App() {
             <Route path="/journal" element={<Journal />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/profile/:id" element={<Profile />} />
+            <Route path="/support" element={<Support />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
