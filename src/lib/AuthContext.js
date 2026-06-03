@@ -206,7 +206,30 @@ export function AuthProvider({ children }) {
       console.log('[AuthContext.signup] supabase.auth.signUp payload =', { ...payload, password: '***' });
 
       const { data, error } = await supabase.auth.signUp(payload);
-      if (error) return { ok: false, error: error.message };
+      if (channel === 'phone') {
+        const serializableError = error
+          ? { message: error.message, status: error.status, name: error.name, code: error.code }
+          : null;
+        console.log(
+          '[Phone Signup] Full result:',
+          JSON.stringify({ data, error: serializableError }, null, 2)
+        );
+      }
+      if (error) {
+        console.error('[AuthContext.signup] supabase.auth.signUp error =', {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+          code: error.code,
+          full: error,
+        });
+        return { ok: false, error: error.message };
+      }
+      console.log('[AuthContext.signup] supabase.auth.signUp success =', {
+        userId: data?.user?.id,
+        hasSession: !!data?.session,
+        identitiesCount: data?.user?.identities?.length,
+      });
       if (!data.user) return { ok: false, error: 'Sign-up failed — no user returned.' };
 
       if (data.session) {
@@ -216,6 +239,7 @@ export function AuthProvider({ children }) {
       }
       return { ok: true, verified: false, channel, identifier };
     } catch (err) {
+      console.error('[AuthContext.signup] threw exception =', err);
       return { ok: false, error: err?.message || 'Sign-up failed.' };
     }
   }
@@ -230,14 +254,25 @@ export function AuthProvider({ children }) {
         channel === 'phone'
           ? { phone: identifier, token: code, type: 'sms' }
           : { email: identifier, token: code, type: 'signup' };
+      console.log('[AuthContext.verifyOtp] payload =', payload);
       const { data, error } = await supabase.auth.verifyOtp(payload);
-      if (error) return { ok: false, error: 'Invalid code. Please try again.' };
+      if (error) {
+        console.error('[AuthContext.verifyOtp] error =', {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+          code: error.code,
+          full: error,
+        });
+        return { ok: false, error: 'Invalid code. Please try again.' };
+      }
       if (data.session) {
         setSession(data.session);
         await loadProfileSafe(data.session);
       }
       return { ok: true };
     } catch (err) {
+      console.error('[AuthContext.verifyOtp] threw exception =', err);
       return { ok: false, error: 'Invalid code. Please try again.' };
     }
   }
@@ -248,10 +283,21 @@ export function AuthProvider({ children }) {
         channel === 'phone'
           ? { type: 'sms', phone: identifier }
           : { type: 'signup', email: identifier };
+      console.log('[AuthContext.resendOtp] payload =', payload);
       const { error } = await supabase.auth.resend(payload);
-      if (error) return { ok: false, error: error.message };
+      if (error) {
+        console.error('[AuthContext.resendOtp] error =', {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+          code: error.code,
+          full: error,
+        });
+        return { ok: false, error: error.message };
+      }
       return { ok: true };
     } catch (err) {
+      console.error('[AuthContext.resendOtp] threw exception =', err);
       return { ok: false, error: err?.message || 'Could not resend code.' };
     }
   }

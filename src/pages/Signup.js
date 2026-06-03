@@ -92,8 +92,10 @@ export default function Signup() {
       navigate('/feed');
       return;
     }
-    console.log('[Signup.submit] setOtp ->', { channel: result.channel, identifier: result.identifier });
-    setOtp({ channel: result.channel, identifier: result.identifier });
+    const otpState = { channel: result.channel, identifier: result.identifier };
+    console.log('[Signup.submit] setOtp ->', otpState);
+    console.log('[Signup] OTP state being set:', JSON.stringify(otpState));
+    setOtp(otpState);
     setResendIn(60);
   }
 
