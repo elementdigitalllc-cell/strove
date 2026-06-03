@@ -48,17 +48,35 @@ export function AuthProvider({ children }) {
         if (!cancelled) setReady(true);
       }
 
-      const result = supabase.auth.onAuthStateChange(async (_event, sess) => {
+      const result = supabase.auth.onAuthStateChange(async (event, sess) => {
+        const pendingReset =
+          typeof window !== 'undefined'
+            ? sessionStorage.getItem('pendingPasswordReset')
+            : null;
+        const pathname =
+          typeof window !== 'undefined' ? window.location.pathname : '';
+        console.log(
+          '[AuthContext] auth event:',
+          event,
+          'pendingReset:',
+          pendingReset,
+          'pathname:',
+          pathname
+        );
         try {
-          // Password-reset OTP succeeds by creating a real session. Keep it
-          // off our React state so PublicOnly guards do not bounce the user
-          // to /home before they pick a new password. SetNewPassword calls
-          // consumePasswordReset() once the update is done.
-          if (
-            typeof window !== 'undefined' &&
-            sessionStorage.getItem('pendingPasswordReset') === 'true'
-          ) {
-            console.log('[auth] pendingPasswordReset flag set; ignoring auth state change');
+          // Password reset path: verifyOtp succeeds by minting a real session
+          // and firing SIGNED_IN. If we let setSession run, the PublicOnly
+          // route guard bounces the user to /home before they can pick a new
+          // password. While the bypass conditions hold, keep the session off
+          // React state entirely. SetNewPassword calls consumePasswordReset()
+          // once the password update is done.
+          const inResetBypass =
+            event === 'SIGNED_IN' &&
+            (pendingReset === 'true' || pathname.includes('login'));
+          if (inResetBypass) {
+            console.log(
+              '[AuthContext] reset bypass active -> NOT updating React session/profile, NOT redirecting'
+            );
             return;
           }
           setSession(sess || null);
