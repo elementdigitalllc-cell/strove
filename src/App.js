@@ -5,6 +5,7 @@ import Splash from './components/Splash';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ResetPassword from './pages/ResetPassword';
 import Feed from './pages/Feed';
 import Create from './pages/Create';
 import Profile from './pages/Profile';
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="/" element={<PublicOnly><Landing /></PublicOnly>} />
           <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
           <Route path="/signup" element={<PublicOnly><Signup /></PublicOnly>} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route element={<Protected><AppShell /></Protected>}>
             <Route path="/home" element={<Feed />} />
             <Route path="/feed" element={<Navigate to="/home" replace />} />

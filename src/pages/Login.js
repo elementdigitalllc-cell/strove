@@ -226,7 +226,7 @@ function ForgotPassword({ onBack, onPhoneOtpSent }) {
     setBusy(true);
     if (kind === 'email') {
       const { error: rpcError } = await supabase.auth.resetPasswordForEmail(trimmed, {
-        redirectTo: window.location.origin + '/login',
+        redirectTo: 'https://www.strove.app/reset-password',
       });
       setBusy(false);
       if (rpcError) return setError(rpcError.message);
