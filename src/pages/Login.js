@@ -112,6 +112,7 @@ export default function Login() {
 function ForgotFlow({ initialView, onBackToLogin }) {
   const [view, setView] = useState(initialView);
   const [phoneForReset, setPhoneForReset] = useState('');
+  console.log('[ForgotFlow] rendering view =', view, '| phoneForReset =', phoneForReset);
 
   return (
     <div className="relative min-h-dvh grid place-items-center px-5 py-10 bg-black font-sans text-white">
@@ -138,7 +139,10 @@ function ForgotFlow({ initialView, onBackToLogin }) {
           <ForgotPasswordOtp
             phone={phoneForReset}
             onBack={() => setView('forgotPassword')}
-            onVerified={() => setView('forgotPasswordSetNew')}
+            onVerified={() => {
+              console.log('[ForgotFlow] onVerified received -> setView(forgotPasswordSetNew)');
+              setView('forgotPasswordSetNew');
+            }}
           />
         ) : view === 'forgotPasswordSetNew' ? (
           <SetNewPassword />
@@ -288,16 +292,36 @@ function ForgotPasswordOtp({ phone, onBack, onVerified }) {
     e.preventDefault();
     setError('');
     setBusy(true);
-    const { error: verifyError } = await supabase.auth.verifyOtp({
+    console.log('[ForgotPasswordOtp] verifying', { phone, codeLength: code.length });
+    const verifyResult = await supabase.auth.verifyOtp({
       phone,
       token: code,
       type: 'sms',
     });
     setBusy(false);
-    if (verifyError) {
+    console.log(
+      '[ForgotPasswordOtp] verifyOtp result =',
+      JSON.stringify(
+        {
+          data: verifyResult.data,
+          error: verifyResult.error
+            ? {
+                message: verifyResult.error.message,
+                status: verifyResult.error.status,
+                name: verifyResult.error.name,
+                code: verifyResult.error.code,
+              }
+            : null,
+        },
+        null,
+        2
+      )
+    );
+    if (verifyResult.error) {
       setError('Invalid code. Please try again.');
       return;
     }
+    console.log('[ForgotPasswordOtp] verify succeeded -> calling onVerified()');
     onVerified();
   }
 
@@ -356,6 +380,11 @@ function SetNewPassword() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    console.log('[SetNewPassword] mounted');
+    return () => console.log('[SetNewPassword] unmounted');
+  }, []);
 
   const checks = useMemo(() => evaluatePassword(pw), [pw]);
   const passwordValid = checks.every((c) => c.met);
