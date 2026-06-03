@@ -210,7 +210,7 @@ export function AuthProvider({ children }) {
 
   async function verifyOtp({ channel, identifier, token }) {
     const code = (token || '').trim();
-    if (!/^\d{6}$/.test(code)) {
+    if (!code) {
       return { ok: false, error: 'Invalid code. Please try again.' };
     }
     try {
