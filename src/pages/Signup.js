@@ -280,9 +280,7 @@ export default function Signup() {
               <Link to="/login" className="text-orange font-semibold hover:underline">
                 log in
               </Link>
-              {duplicateAccount === 'phone'
-                ? ' or use a different number.'
-                : ' or use a different email.'}
+              {' instead.'}
             </div>
           ) : error ? (
             <div className="text-[13px] text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-[8px] px-3 py-2">

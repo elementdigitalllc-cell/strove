@@ -264,9 +264,15 @@ export function AuthProvider({ children }) {
       });
       if (!data.user) return { ok: false, error: 'Sign-up failed — no user returned.' };
 
-      // user_repeated_signup detection: Supabase silently returns the existing
-      // user (no error, no session) for a duplicate. Distinguish a fresh signup
-      // from a repeat by checking how old user.created_at is.
+      // Supabase signals an already-registered account by returning a user with
+      // an empty identities array (and no session). Catch it explicitly.
+      if (Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        console.warn('[AuthContext.signup] empty identities -> duplicate account');
+        return { ok: false, error: channel === 'phone' ? 'phone_exists' : 'email_exists', channel };
+      }
+
+      // Fallback heuristic: no session and the auth user is older than 2 minutes
+      // means this was a silent repeated signup.
       if (!data.session && data.user.created_at) {
         const createdMs = Date.parse(data.user.created_at);
         const ageMs = Date.now() - createdMs;
