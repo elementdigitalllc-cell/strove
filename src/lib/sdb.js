@@ -105,7 +105,6 @@ export async function getFeedPosts(limit = 50) {
       return {
         ...original,
         feed_id: `repost-${r.user_id}-${r.post_id}`,
-        is_repost: true,
         repost_by: profileMap.get(r.user_id) || null,
         repost_at: r.created_at,
         display_at: r.created_at,
@@ -116,7 +115,6 @@ export async function getFeedPosts(limit = 50) {
   const postItems = posts.map((p) => ({
     ...p,
     feed_id: p.id,
-    is_repost: false,
     repost_by: null,
     repost_at: null,
     display_at: p.created_at,
