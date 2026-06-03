@@ -1,14 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { evaluatePassword } from '../lib/password';
 import BackArrow from '../components/BackArrow';
 import PasswordChecklist from '../components/PasswordChecklist';
 
+function parseHashParams(hash) {
+  const out = {};
+  const raw = (hash || '').replace(/^#/, '');
+  if (!raw) return out;
+  for (const pair of raw.split('&')) {
+    const [k, v] = pair.split('=');
+    if (k) out[decodeURIComponent(k)] = decodeURIComponent(v || '');
+  }
+  return out;
+}
+
 export default function ResetPassword() {
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
-  const [validSession, setValidSession] = useState(false);
 
   const [pw, setPw] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -22,27 +32,38 @@ export default function ResetPassword() {
 
   useEffect(() => {
     let cancelled = false;
-    async function check() {
-      // Supabase-js parses the recovery token from the URL hash automatically
-      // when the page loads. Give it a tick, then read the resulting session.
-      const { data } = await supabase.auth.getSession();
+
+    async function bootstrap() {
+      const params = parseHashParams(window.location.hash);
+      console.log('[ResetPassword] hash params =', params);
+
+      if (params.type !== 'recovery' || !params.access_token) {
+        console.warn('[ResetPassword] no recovery token -> redirecting to /login');
+        navigate('/login', { replace: true });
+        return;
+      }
+
+      const { error: setError } = await supabase.auth.setSession({
+        access_token: params.access_token,
+        refresh_token: params.refresh_token || '',
+      });
       if (cancelled) return;
-      setValidSession(!!data?.session);
+      if (setError) {
+        console.error('[ResetPassword] setSession failed:', setError);
+        navigate('/login', { replace: true });
+        return;
+      }
+
+      // Clean the hash so a refresh doesn't re-trigger the flow.
+      window.history.replaceState(null, '', window.location.pathname);
       setReady(true);
     }
-    check();
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[ResetPassword] auth event:', event, 'hasSession:', !!session);
-      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-        setValidSession(!!session);
-        setReady(true);
-      }
-    });
+
+    bootstrap();
     return () => {
       cancelled = true;
-      sub.subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   async function submit(e) {
     e.preventDefault();
@@ -53,8 +74,8 @@ export default function ResetPassword() {
     const { error: updateError } = await supabase.auth.updateUser({ password: pw });
     setBusy(false);
     if (updateError) return setError(updateError.message);
-    setSuccess('Password updated.');
-    setTimeout(() => navigate('/home'), 800);
+    setSuccess('Password updated successfully!');
+    setTimeout(() => navigate('/home'), 2000);
   }
 
   return (
@@ -70,21 +91,6 @@ export default function ResetPassword() {
 
         {!ready ? (
           <p className="text-sm text-zinc-500">Verifying recovery link…</p>
-        ) : !validSession ? (
-          <>
-            <h1 className="text-[22px] font-bold tracking-tight text-white text-center">
-              Reset link expired
-            </h1>
-            <p className="mt-2 text-sm text-zinc-500 text-center">
-              This password reset link is invalid or has expired. Request a new one from the login page.
-            </p>
-            <Link
-              to="/login"
-              className="mt-6 w-full h-11 grid place-items-center rounded-[6px] bg-orange text-black text-[15px] font-semibold hover:brightness-110 transition"
-            >
-              Back to log in
-            </Link>
-          </>
         ) : (
           <>
             <h1 className="text-[22px] font-bold tracking-tight text-white text-center">
@@ -117,7 +123,7 @@ export default function ResetPassword() {
               ) : null}
               {success ? (
                 <div className="text-[13px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-[6px] px-3 py-2">
-                  {success} Redirecting…
+                  {success}
                 </div>
               ) : null}
               <button
