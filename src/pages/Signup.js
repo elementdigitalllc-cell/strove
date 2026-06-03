@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Check, X } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
+import { supabase } from '../supabaseClient';
 import LegalModal from '../components/LegalModal';
 import BackArrow from '../components/BackArrow';
 
@@ -30,6 +31,7 @@ export default function Signup() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [legalModal, setLegalModal] = useState(null);
+  const [usernameError, setUsernameError] = useState('');
 
   // OTP state
   const [otp, setOtp] = useState(null); // { channel, identifier } | null
@@ -44,12 +46,38 @@ export default function Signup() {
   const passwordChecks = useMemo(() => evaluatePassword(form.password), [form.password]);
   const passwordValid = passwordChecks.every((c) => c.met);
 
+  async function checkUsernameAvailable(name) {
+    const trimmed = (name || '').trim().toLowerCase();
+    if (!trimmed) {
+      setUsernameError('');
+      return true;
+    }
+    const { data, error: lookupError } = await supabase
+      .from('profiles')
+      .select('id')
+      .ilike('username', trimmed)
+      .maybeSingle();
+    if (lookupError) {
+      // Don't block on lookup failure; server-side unique constraint will catch it.
+      setUsernameError('');
+      return true;
+    }
+    if (data) {
+      setUsernameError('This username is already taken. Please choose another.');
+      return false;
+    }
+    setUsernameError('');
+    return true;
+  }
+
   async function submit(e) {
     e.preventDefault();
     setError('');
     if (!passwordValid) {
       return setError('Password does not meet the requirements below.');
     }
+    const usernameOk = await checkUsernameAvailable(form.username);
+    if (!usernameOk) return;
     setBusy(true);
     const result = await signup({
       fullName: form.fullName,
@@ -58,11 +86,13 @@ export default function Signup() {
       password: form.password,
     });
     setBusy(false);
+    console.log('[Signup.submit] signup result =', result);
     if (!result.ok) return setError(result.error);
     if (result.verified) {
       navigate('/feed');
       return;
     }
+    console.log('[Signup.submit] setOtp ->', { channel: result.channel, identifier: result.identifier });
     setOtp({ channel: result.channel, identifier: result.identifier });
     setResendIn(60);
   }
@@ -138,7 +168,7 @@ export default function Signup() {
         </p>
 
         <form onSubmit={submit} className="mt-8 flex flex-col gap-4">
-          <LabeledField label="Mobile number or email address">
+          <LabeledField label="Mobile Number or Email Address">
             <SignupInput
               type="text"
               autoCapitalize="off"
@@ -171,8 +201,15 @@ export default function Signup() {
               autoCapitalize="off"
               autoCorrect="off"
               value={form.username}
-              onChange={(e) => update('username', e.target.value)}
+              onChange={(e) => {
+                update('username', e.target.value);
+                if (usernameError) setUsernameError('');
+              }}
+              onBlur={(e) => checkUsernameAvailable(e.target.value)}
             />
+            {usernameError ? (
+              <p className="mt-2 text-[13px] text-rose-400">{usernameError}</p>
+            ) : null}
           </LabeledField>
 
           <p className="text-[12px] leading-relaxed text-zinc-500 mt-1">
@@ -203,7 +240,7 @@ export default function Signup() {
 
           <button
             type="submit"
-            disabled={busy || !passwordValid}
+            disabled={busy || !passwordValid || !!usernameError}
             className="mt-2 w-full h-12 rounded-[8px] bg-orange text-black text-[15px] font-semibold transition hover:brightness-110 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {busy ? 'Creating account…' : 'Create account'}
@@ -244,6 +281,7 @@ function OtpScreen({
   }, [resendIn, setResendIn]);
 
   const codeLength = channel === 'phone' ? 6 : 8;
+  console.log('[OtpScreen] channel =', channel, '| codeLength =', codeLength, '| identifier =', identifier);
   const title = channel === 'phone' ? 'Check your phone' : 'Check your email';
   const subtitle =
     channel === 'phone'

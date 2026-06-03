@@ -181,6 +181,7 @@ export function AuthProvider({ children }) {
     if (pwError) return { ok: false, error: pwError };
 
     const channel = detectChannel(contact);
+    console.log('[AuthContext.signup] contact =', JSON.stringify(contact), '| detected channel =', channel);
     if (!channel) {
       return { ok: false, error: 'Enter a valid email or phone number (with country code, e.g. +14155551234).' };
     }
@@ -202,6 +203,7 @@ export function AuthProvider({ children }) {
         identifier = normalizePhone(contact);
         payload = { phone: identifier, password, options: meta };
       }
+      console.log('[AuthContext.signup] supabase.auth.signUp payload =', { ...payload, password: '***' });
 
       const { data, error } = await supabase.auth.signUp(payload);
       if (error) return { ok: false, error: error.message };
