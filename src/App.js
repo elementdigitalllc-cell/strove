@@ -12,6 +12,8 @@ import Profile from './pages/Profile';
 import Compete from './pages/Compete';
 import Journal from './pages/Journal';
 import Support from './pages/Support';
+import Notifications from './pages/Notifications';
+import Messages from './pages/Messages';
 import './App.css';
 
 function Protected({ children }) {
@@ -48,6 +50,8 @@ export default function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/profile/:id" element={<Profile />} />
             <Route path="/support" element={<Support />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/messages" element={<Messages />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { Home, Trophy, Plus, Lock, User } from 'lucide-react';
+import { Home, Trophy, Plus, Lock, User, Bell, MessageSquare } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import BrandLogo from './BrandLogo';
 import { cn } from '../lib/cn';
@@ -35,9 +35,17 @@ export default function AppShell() {
           <BrandLogo size={28} />
           <span className="text-[17px] font-bold tracking-tight">{title}</span>
         </div>
-        <NavLink to="/profile" className="h-8 w-8 rounded-full overflow-hidden grid place-items-center text-orange-400 font-bold text-sm bg-card border border-border" aria-label="Profile">
-          <span>{(user?.full_name || user?.username || '?')[0].toUpperCase()}</span>
-        </NavLink>
+        <div className="flex items-center gap-1.5">
+          <NavLink to="/notifications" aria-label="Notifications" className="h-8 w-8 grid place-items-center rounded text-muted hover:text-fg hover:bg-card transition-colors">
+            <Bell size={18} strokeWidth={1.8} />
+          </NavLink>
+          <NavLink to="/messages" aria-label="Messages" className="h-8 w-8 grid place-items-center rounded text-muted hover:text-fg hover:bg-card transition-colors">
+            <MessageSquare size={18} strokeWidth={1.8} />
+          </NavLink>
+          <NavLink to="/profile" className="h-8 w-8 rounded-full overflow-hidden grid place-items-center text-orange-400 font-bold text-sm bg-card border border-border" aria-label="Profile">
+            <span>{(user?.full_name || user?.username || '?')[0].toUpperCase()}</span>
+          </NavLink>
+        </div>
       </header>
 
       <main className="flex-1 px-4 pt-4 pb-24">

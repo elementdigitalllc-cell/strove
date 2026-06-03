@@ -1,8 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MessageCircle, Repeat2, Heart, Eye, Share } from 'lucide-react';
+import { MessageCircle, Repeat2, Heart, Eye, Share, Bookmark } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
-import { bumpPostInt, follow, unfollow, getFollowing } from '../lib/sdb';
+import {
+  bumpPostInt,
+  follow,
+  unfollow,
+  getFollowing,
+  listComments,
+  createComment,
+  savePost,
+  unsavePost,
+  getSavedPostIds,
+} from '../lib/sdb';
 import { Avatar } from './ui/Avatar';
 import { StreakPill } from './ui/Pill';
 import { cn } from '../lib/cn';
@@ -26,7 +36,6 @@ function formatCount(n) {
   return (v / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
 }
 
-// Per-session local memory of which posts the current user already bumped
 const LIKED_KEY = 'strove.localLiked';
 const REPOSTED_KEY = 'strove.localReposted';
 const VIEWED_KEY = 'strove.localViewed';
@@ -41,6 +50,12 @@ export default function PostCard({ post: initial }) {
   const [following, setFollowing] = useState(false);
   const [liked, setLiked] = useState(() => readSet(LIKED_KEY).has(initial.id));
   const [reposted, setReposted] = useState(() => readSet(REPOSTED_KEY).has(initial.id));
+  const [saved, setSaved] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [commentDraft, setCommentDraft] = useState('');
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [shareNote, setShareNote] = useState('');
   const articleRef = useRef(null);
   const viewedRef = useRef(false);
 
@@ -50,11 +65,16 @@ export default function PostCard({ post: initial }) {
     let cancelled = false;
     (async () => {
       if (!user) return;
-      const { data } = await getFollowing(user.id);
-      if (!cancelled) setFollowing(data.includes(post.user_id));
+      const [followsRes, savedRes] = await Promise.all([
+        getFollowing(user.id),
+        getSavedPostIds(user.id),
+      ]);
+      if (cancelled) return;
+      setFollowing(followsRes.data.includes(post.user_id));
+      setSaved((savedRes.data || []).includes(post.id));
     })();
     return () => { cancelled = true; };
-  }, [user, post.user_id]);
+  }, [user, post.user_id, post.id]);
 
   useEffect(() => {
     if (!articleRef.current || !user || post.user_id === user.id) return;
@@ -94,10 +114,57 @@ export default function PostCard({ post: initial }) {
     if (data) setPost((p) => ({ ...p, reposts: data.reposts }));
   }
 
-  function share() {
+  async function tapSave() {
+    if (!user) return;
+    if (saved) {
+      const { error } = await unsavePost(user.id, post.id);
+      if (!error) setSaved(false);
+    } else {
+      const { error } = await savePost(user.id, post.id);
+      if (!error) setSaved(true);
+    }
+  }
+
+  async function openComments() {
+    setCommentsOpen((v) => !v);
+    if (!commentsOpen) {
+      const { data } = await listComments(post.id);
+      setComments(data);
+    }
+  }
+
+  async function submitComment(e) {
+    e.preventDefault();
+    const content = commentDraft.trim();
+    if (!content || !user) return;
+    setCommentSubmitting(true);
+    const { data, error } = await createComment({
+      post_id: post.id,
+      user_id: user.id,
+      content,
+    });
+    setCommentSubmitting(false);
+    if (error) return;
+    setCommentDraft('');
+    setComments((c) => [...c, data]);
+    setPost((p) => ({ ...p, comments: (p.comments || 0) + 1 }));
+  }
+
+  async function share() {
     const url = window.location.origin + '/profile/' + post.user_id;
-    if (navigator.share) navigator.share({ text: post.content, url }).catch(() => {});
-    else if (navigator.clipboard) navigator.clipboard.writeText(post.content + '\n' + url).catch(() => {});
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: post.content, url });
+        return;
+      } catch { /* fall through to clipboard */ }
+    }
+    if (navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(post.content + '\n' + url);
+        setShareNote('Link copied');
+        setTimeout(() => setShareNote(''), 1500);
+      } catch { /* noop */ }
+    }
   }
 
   async function toggleFollow() {
@@ -126,7 +193,7 @@ export default function PostCard({ post: initial }) {
       <span className={cn('grid place-items-center h-7 w-7 rounded transition-colors', active && 'bg-current/10')}>
         <Icon size={17} strokeWidth={1.8} fill={active ? 'currentColor' : 'none'} />
       </span>
-      <span className="tabular-nums">{formatCount(value)}</span>
+      {value !== undefined ? <span className="tabular-nums">{formatCount(value)}</span> : null}
     </button>
   );
 
@@ -161,13 +228,60 @@ export default function PostCard({ post: initial }) {
           <p className="my-1.5 text-[15px] leading-[1.45] whitespace-pre-wrap break-words text-fg font-normal">{post.content}</p>
         ) : null}
 
-        <div className="mt-2 pt-2.5 border-t border-border flex items-center justify-between max-w-[460px]">
-          <Action icon={MessageCircle} value={0} ariaLabel="Comment" />
+        <div className="mt-2 pt-2.5 border-t border-border flex items-center justify-between max-w-[500px]">
+          <Action icon={MessageCircle} value={post.comments || 0} active={commentsOpen} color="text-orange-400" onClick={openComments} ariaLabel="Comment" />
           <Action icon={Repeat2} value={post.reposts || 0} active={reposted} color="text-emerald-400" onClick={tapRepost} ariaLabel="Repost" />
-          <Action icon={Heart} value={post.likes || 0} active={liked} color="text-rose-400" onClick={tapLike} ariaLabel="Like" />
+          <Action icon={Heart} value={post.likes || 0} active={liked} color="text-orange" onClick={tapLike} ariaLabel="Like" />
           <Action icon={Eye} value={post.views || 0} ariaLabel="Views" />
-          <Action icon={Share} value={0} onClick={share} ariaLabel="Share" />
+          <Action icon={Bookmark} active={saved} color="text-orange-400" onClick={tapSave} ariaLabel="Save" />
+          <Action icon={Share} onClick={share} ariaLabel="Share" />
         </div>
+
+        {shareNote ? (
+          <p className="mt-1.5 text-[11.5px] text-emerald-400">{shareNote}</p>
+        ) : null}
+
+        {commentsOpen ? (
+          <div className="mt-3 pt-3 border-t border-border flex flex-col gap-3">
+            {comments.length > 0 ? (
+              <ul className="flex flex-col gap-3">
+                {comments.map((c) => (
+                  <li key={c.id} className="flex gap-2.5 text-[14px]">
+                    <Avatar name={c.profiles?.full_name || c.profiles?.username || '?'} size="sm" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 text-[12.5px]">
+                        <span className="font-bold text-fg">{c.profiles?.full_name || c.profiles?.username}</span>
+                        <span className="text-muted">@{c.profiles?.username}</span>
+                        <span className="text-muted">·</span>
+                        <span className="text-muted">{timeAgo(c.created_at)}</span>
+                      </div>
+                      <p className="mt-0.5 text-[14px] leading-snug whitespace-pre-wrap break-words text-fg">{c.content}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {user ? (
+              <form onSubmit={submitComment} className="flex gap-2">
+                <input
+                  type="text"
+                  value={commentDraft}
+                  onChange={(e) => setCommentDraft(e.target.value)}
+                  placeholder="Write a comment..."
+                  maxLength={280}
+                  className="flex-1 h-10 px-3 rounded bg-card border border-border text-fg text-[14px] placeholder:text-muted/70 outline-none focus:border-orange transition-colors"
+                />
+                <button
+                  type="submit"
+                  disabled={!commentDraft.trim() || commentSubmitting}
+                  className="h-10 px-4 rounded bg-orange text-black text-[13px] font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 transition"
+                >
+                  {commentSubmitting ? '…' : 'Post'}
+                </button>
+              </form>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </article>
   );

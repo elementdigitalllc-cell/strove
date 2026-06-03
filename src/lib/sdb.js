@@ -76,6 +76,66 @@ export async function createPost({ user_id, content }) {
   return { data, error };
 }
 
+/* ============ Comments ============ */
+
+export async function listComments(postId) {
+  const { data, error } = await supabase
+    .from('comments')
+    .select('*, profiles:profiles!comments_user_id_fkey (id, username, full_name)')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: true });
+  return { data: data || [], error };
+}
+
+export async function createComment({ post_id, user_id, content }) {
+  const { data, error } = await supabase
+    .from('comments')
+    .insert({ post_id, user_id, content })
+    .select('*, profiles:profiles!comments_user_id_fkey (id, username, full_name)')
+    .single();
+  return { data, error };
+}
+
+export async function deleteComment(commentId) {
+  const { error } = await supabase.from('comments').delete().eq('id', commentId);
+  return { error };
+}
+
+/* ============ Saved posts (bookmarks) ============ */
+
+export async function savePost(userId, postId) {
+  const { error } = await supabase
+    .from('saved_posts')
+    .insert({ user_id: userId, post_id: postId });
+  return { error };
+}
+
+export async function unsavePost(userId, postId) {
+  const { error } = await supabase
+    .from('saved_posts')
+    .delete()
+    .eq('user_id', userId)
+    .eq('post_id', postId);
+  return { error };
+}
+
+export async function getSavedPostIds(userId) {
+  const { data, error } = await supabase
+    .from('saved_posts')
+    .select('post_id')
+    .eq('user_id', userId);
+  return { data: (data || []).map((r) => r.post_id), error };
+}
+
+export async function getSavedPosts(userId) {
+  const { data, error } = await supabase
+    .from('saved_posts')
+    .select('post_id, created_at, posts:posts!saved_posts_post_id_fkey (*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count))')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  return { data: (data || []).map((r) => r.posts).filter(Boolean), error };
+}
+
 export async function bumpPostInt(postId, field) {
   // Uses SECURITY DEFINER RPC so RLS doesn't block non-owner increments.
   const { error: rpcError } = await supabase.rpc('bump_post', {
