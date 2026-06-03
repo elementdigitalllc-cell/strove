@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
-import { getFeedPosts, getFollowing } from '../lib/sdb';
+import { getFeedPosts, getFollowing, bumpViewsBatch } from '../lib/sdb';
 import PostCard from '../components/PostCard';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
 import { LoadingBlock, ErrorBlock } from '../components/ui/States';
@@ -23,7 +23,24 @@ export default function Feed() {
     if (postsResult.error) {
       setError(postsResult.error);
     } else {
-      setPosts(postsResult.data);
+      const fetched = postsResult.data || [];
+      setPosts(fetched);
+      // Batch-bump views for every loaded post except your own.
+      const viewablePostIds = fetched
+        .filter((p) => p.user_id !== user?.id)
+        .map((p) => p.id);
+      if (viewablePostIds.length) {
+        bumpViewsBatch(viewablePostIds).then(({ error: bumpError }) => {
+          if (bumpError) return;
+          setPosts((current) =>
+            current.map((p) =>
+              viewablePostIds.includes(p.id)
+                ? { ...p, views: (p.views || 0) + 1 }
+                : p
+            )
+          );
+        });
+      }
     }
     setFollowing(followsResult.data || []);
     setLoading(false);

@@ -124,44 +124,43 @@ export async function getLikedPostIds(userId) {
 
 /* ============ Reposts ============ */
 
-export async function repostPost({ user_id, original_post_id, content }) {
-  console.log('[sdb.repostPost] inserting', { user_id, original_post_id });
-  const { data, error } = await supabase
-    .from('posts')
-    .insert({ user_id, content, original_post_id, is_repost: true })
-    .select('*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count)')
-    .single();
+export async function repostPost({ user_id, post_id }) {
+  console.log('[sdb.repostPost] inserting reposts row', { user_id, post_id });
+  const { error } = await supabase
+    .from('reposts')
+    .insert({ user_id, post_id });
   if (error) {
     console.error('[sdb.repostPost] insert error:', error);
-    return { data, error };
-  }
-  await changePostCount(original_post_id, 'reposts', 1);
-  console.log('[sdb.repostPost] success', { newRowId: data?.id });
-  return { data, error: null };
-}
-
-export async function unrepost(userId, originalPostId) {
-  console.log('[sdb.unrepost] deleting', { userId, originalPostId });
-  const { error } = await supabase
-    .from('posts')
-    .delete()
-    .eq('user_id', userId)
-    .eq('original_post_id', originalPostId);
-  if (error) {
-    console.error('[sdb.unrepost] delete error:', error);
     return { error };
   }
-  await changePostCount(originalPostId, 'reposts', -1);
+  // posts.reposts is bumped by the reposts trigger (server side).
   return { error: null };
+}
+
+export async function unrepost(userId, postId) {
+  console.log('[sdb.unrepost] deleting reposts row', { userId, postId });
+  const { error } = await supabase
+    .from('reposts')
+    .delete()
+    .eq('user_id', userId)
+    .eq('post_id', postId);
+  if (error) console.error('[sdb.unrepost] delete error:', error);
+  return { error };
 }
 
 export async function getRepostedOriginalIds(userId) {
   const { data, error } = await supabase
-    .from('posts')
-    .select('original_post_id')
-    .eq('user_id', userId)
-    .not('original_post_id', 'is', null);
-  return { data: (data || []).map((r) => r.original_post_id), error };
+    .from('reposts')
+    .select('post_id')
+    .eq('user_id', userId);
+  return { data: (data || []).map((r) => r.post_id), error };
+}
+
+export async function bumpViewsBatch(postIds) {
+  if (!postIds || postIds.length === 0) return { error: null };
+  const { error } = await supabase.rpc('bump_views_batch', { post_ids: postIds });
+  if (error) console.error('[sdb.bumpViewsBatch] error:', error);
+  return { error };
 }
 
 /* ============ Comments ============ */
