@@ -150,7 +150,8 @@ export async function createPost({ user_id, content }) {
 /* ============ Notifications ============ */
 
 export async function createNotification({ user_id, actor_id, type, post_id = null }) {
-  console.log('[sdb.createNotification] called', { user_id, actor_id, type, post_id });
+  console.log('[sdb.createNotification] called with args =', { user_id, actor_id, type, post_id });
+
   if (!user_id || !actor_id) {
     console.warn('[sdb.createNotification] skip: missing user_id or actor_id');
     return { error: null };
@@ -159,14 +160,50 @@ export async function createNotification({ user_id, actor_id, type, post_id = nu
     console.log('[sdb.createNotification] skip: self-notification');
     return { error: null };
   }
-  const { data, error } = await supabase
+
+  // What does the auth layer think the current user is? RLS check
+  // `auth.uid() = actor_id` will fail if these don't match.
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  const authUid = sessionData?.session?.user?.id || null;
+  console.log('[sdb.createNotification] supabase auth uid =', authUid, sessionError ? 'sessionError=' + sessionError.message : '');
+  if (authUid !== actor_id) {
+    console.warn(
+      '[sdb.createNotification] WARNING: actor_id !== auth.uid(); RLS will reject this insert',
+      { actor_id, authUid }
+    );
+  }
+
+  const payload = { user_id, actor_id, type, post_id };
+  console.log('[sdb.createNotification] inserting payload =', JSON.stringify(payload, null, 2));
+
+  const response = await supabase
     .from('notifications')
-    .insert({ user_id, actor_id, type, post_id })
-    .select('id')
+    .insert(payload)
+    .select('id, user_id, actor_id, type, post_id, created_at, is_read')
     .single();
-  if (error) console.error('[sdb.createNotification] insert error:', error);
-  else console.log('[sdb.createNotification] inserted id =', data?.id);
-  return { error };
+
+  console.log(
+    '[sdb.createNotification] full supabase response =',
+    JSON.stringify(
+      {
+        data: response.data,
+        error: response.error
+          ? {
+              message: response.error.message,
+              code: response.error.code,
+              details: response.error.details,
+              hint: response.error.hint,
+            }
+          : null,
+        status: response.status,
+        statusText: response.statusText,
+      },
+      null,
+      2
+    )
+  );
+
+  return { error: response.error };
 }
 
 export async function getMyNotifications(userId, limit = 50) {
