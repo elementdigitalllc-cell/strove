@@ -27,23 +27,21 @@ function detectContactKind(c) {
 }
 
 function classifyDuplicateError(result, contact) {
-  const msg = (result?.error || '').toLowerCase();
+  const err = (result?.error || '').toLowerCase();
   const code = (result?.code || '').toLowerCase();
+  if (err === 'phone_exists') return 'phone';
+  if (err === 'email_exists') return 'email';
   const looksDuplicate =
     code === 'user_already_exists' ||
     code === 'user_repeated_signup' ||
-    code === 'phone_exists' ||
-    code === 'email_exists' ||
-    msg.includes('already registered') ||
-    msg.includes('already been registered') ||
-    msg.includes('user already registered') ||
-    msg.includes('user_repeated_signup') ||
-    (msg.includes('phone') && msg.includes('registered')) ||
-    (msg.includes('phone') && msg.includes('exists'));
+    err.includes('already registered') ||
+    err.includes('already been registered') ||
+    err.includes('user already registered') ||
+    err.includes('user_repeated_signup');
   if (!looksDuplicate) return null;
   const phoneSignal =
     result?.channel === 'phone' ||
-    msg.includes('phone') ||
+    err.includes('phone') ||
     code.includes('phone') ||
     detectContactKind(contact) === 'phone';
   return phoneSignal ? 'phone' : 'email';
@@ -277,13 +275,14 @@ export default function Signup() {
           {duplicateAccount ? (
             <div className="text-[13px] text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-[8px] px-3 py-2">
               {duplicateAccount === 'phone'
-                ? 'An account with this phone number already exists.'
-                : 'An account with this email already exists.'}{' '}
-              Please{' '}
+                ? 'This phone number is already registered. Please '
+                : 'This email is already registered. Please '}
               <Link to="/login" className="text-orange font-semibold hover:underline">
                 log in
-              </Link>{' '}
-              instead.
+              </Link>
+              {duplicateAccount === 'phone'
+                ? ' or use a different number.'
+                : ' or use a different email.'}
             </div>
           ) : error ? (
             <div className="text-[13px] text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-[8px] px-3 py-2">

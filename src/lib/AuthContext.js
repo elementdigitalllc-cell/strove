@@ -235,14 +235,31 @@ export function AuthProvider({ children }) {
           code: error.code,
           full: error,
         });
+        const lowered = (error.message || '').toLowerCase();
+        if (lowered.includes('already registered') || error.code === 'user_already_exists') {
+          return { ok: false, error: channel === 'phone' ? 'phone_exists' : 'email_exists', channel };
+        }
         return { ok: false, error: error.message, code: error.code, channel };
       }
       console.log('[AuthContext.signup] supabase.auth.signUp success =', {
         userId: data?.user?.id,
         hasSession: !!data?.session,
         identitiesCount: data?.user?.identities?.length,
+        createdAt: data?.user?.created_at,
       });
       if (!data.user) return { ok: false, error: 'Sign-up failed — no user returned.' };
+
+      // user_repeated_signup detection: Supabase silently returns the existing
+      // user (no error, no session) for a duplicate. Distinguish a fresh signup
+      // from a repeat by checking how old user.created_at is.
+      if (!data.session && data.user.created_at) {
+        const createdMs = Date.parse(data.user.created_at);
+        const ageMs = Date.now() - createdMs;
+        if (Number.isFinite(createdMs) && ageMs > 2 * 60 * 1000) {
+          console.warn('[AuthContext.signup] repeated signup detected. user age (ms) =', ageMs);
+          return { ok: false, error: channel === 'phone' ? 'phone_exists' : 'email_exists', channel };
+        }
+      }
 
       if (data.session) {
         setSession(data.session);
