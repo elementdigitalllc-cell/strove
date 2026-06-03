@@ -11,8 +11,14 @@ import {
   Plus,
   Lock,
   User,
-  X,
 } from 'lucide-react';
+import {
+  PRIVACY_BODY,
+  PRIVACY_TITLE,
+  TERMS_BODY,
+  TERMS_TITLE,
+} from '../components/LegalContent';
+import LegalModal from '../components/LegalModal';
 
 const FEED_POSTS = [
   {
@@ -81,93 +87,63 @@ const BOTTOM_TABS = [
 ];
 
 const ABOUT_BODY = (
-  <>
-    <p>
-      Strove is the long-game social platform for people working on themselves. Document your goal day by day. Build daily check-in streaks. Follow people grinding toward the same kind of thing.
-    </p>
-    <p>
-      Every month, anyone who's serious can enter the pot — $1 in, the community votes, the winner takes everything. No algorithms ranking who deserves it. Just public effort, public votes, real money.
-    </p>
-    <p>
-      No fake highlight reels. No vanity follower counts. Show up every day or the streak resets. That's the whole product.
-    </p>
-  </>
+  <p>
+    Strove is a social platform for people working on long-term goals. Document your journey day by day, build a public streak, find like-minded people, get motivation and accountability from a real community, and compete for a real cash prize every month voted on by the community.
+  </p>
 );
+
+function FeatureItem({ n, title, children }) {
+  return (
+    <li>
+      <strong className="block text-white font-bold mb-1">{n}. {title}</strong>
+      {children}
+    </li>
+  );
+}
 
 const FEATURES_BODY = (
   <ul className="space-y-4">
-    <li>
-      <strong className="block text-white font-bold mb-1">Daily streaks</strong>
-      One tap to check in. Auto check-in fires when you open the app. Miss a day, the streak resets to zero.
-    </li>
-    <li>
-      <strong className="block text-white font-bold mb-1">Public feed</strong>
-      Posts are public by default. Followers track your goal day by day — no curated greatest hits.
-    </li>
-    <li>
-      <strong className="block text-white font-bold mb-1">Monthly pot</strong>
-      $1 to enter. Post weekly. Vote for one other person. Winner takes the whole pot on the 15th.
-    </li>
-    <li>
-      <strong className="block text-white font-bold mb-1">Private journal</strong>
-      Locked notebook only you see. AI surfaces patterns in your work and friction points before you quit.
-    </li>
+    <FeatureItem n={1} title="Daily streaks">
+      Check in every day to keep your streak alive. Miss a day and it resets.
+    </FeatureItem>
+    <FeatureItem n={2} title="Social feed">
+      Post public updates, follow other people's journeys, like, comment, and share.
+    </FeatureItem>
+    <FeatureItem n={3} title="Private journal">
+      Log private notes and get AI insights about your progress.
+    </FeatureItem>
+    <FeatureItem n={4} title="Monthly pot">
+      Pay $1 to enter, post weekly, vote for someone else, one winner takes the whole pot.
+    </FeatureItem>
   </ul>
 );
 
 const COMPETE_BODY = (
-  <ol className="list-decimal pl-5 space-y-1.5">
-    <li>$1 to enter the monthly pot.</li>
-    <li>Check in every day to keep your streak alive.</li>
-    <li>Post 1 public update per week to stay eligible.</li>
-    <li>Winner takes all.</li>
-    <li>You must vote for one other person before voting closes to stay eligible.</li>
-    <li>Entries close the 15th of each month.</li>
-    <li>All vote counts are anonymous.</li>
-    <li>Minimum 100 qualified competitors or the pot rolls over.</li>
-    <li>First pot goes live at 1,000 users.</li>
-    <li>Each entrant writes a public "why I should win" statement pinned to their profile.</li>
-    <li>Voting is completely public.</li>
-    <li>One vote per person.</li>
-  </ol>
-);
-
-const PRIVACY_BODY = (
   <>
     <p>
-      We collect the minimum needed to run Strove: your email, username, posts, follows, journal notes, and pot/vote activity.
+      The Monthly Pot is Strove's community competition. Every month, qualified entrants compete for a single cash prize voted on by the entrants themselves.
     </p>
-    <p>
-      Your journal is private — only you can read it. Posts, profile info, follower counts, pot entries, and votes are public.
-    </p>
-    <p>
-      We don't sell your data. We use Supabase for auth and storage. You can delete your account and erase your data at any time by emailing us.
-    </p>
-    <p className="text-[#71717a] text-[12px] mt-4">Last updated: June 2026.</p>
-  </>
-);
-
-const TERMS_BODY = (
-  <>
-    <p>
-      By using Strove you agree to behave like an adult. No harassment, no spam, no illegal content. Be honest about your check-ins — fake streaks get banned.
-    </p>
-    <p>
-      Pot entries are final once submitted. Entry fees are non-refundable. We reserve the right to disqualify entrants who break the rules.
-    </p>
-    <p>
-      Strove is provided as-is. We don't guarantee uptime, payout timing, or that you'll actually become a better person. That part is on you.
-    </p>
-    <p className="text-[#71717a] text-[12px] mt-4">Last updated: June 2026.</p>
+    <ul className="list-disc pl-5 space-y-1.5">
+      <li>$1 to enter the pot.</li>
+      <li>Entries close the 15th of each month.</li>
+      <li>Check in daily to stay eligible.</li>
+      <li>Post at least once a week to stay eligible.</li>
+      <li>
+        Voting opens immediately when you enter the pot. You must cast your vote for another competitor before the draw closes at the end of the month to remain eligible to win. One vote per person, anonymous, you cannot vote for yourself.
+      </li>
+      <li>One winner takes the entire pot.</li>
+      <li>Minimum 100 qualified competitors or the pot rolls to the next month.</li>
+      <li>First pot goes live at 1,000 users.</li>
+    </ul>
   </>
 );
 
 const FOOTER_LINKS = [
   { key: 'about', label: 'About', title: 'About Strove', body: ABOUT_BODY },
   { key: 'features', label: 'Features', title: 'Features', body: FEATURES_BODY },
-  { key: 'compete', label: 'Compete', title: 'The monthly pot — 12 rules', body: COMPETE_BODY },
-  { key: 'privacy', label: 'Privacy', title: 'Privacy policy', body: PRIVACY_BODY },
-  { key: 'terms', label: 'Terms', title: 'Terms of service', body: TERMS_BODY },
+  { key: 'compete', label: 'Compete', title: 'The Monthly Pot', body: COMPETE_BODY },
+  { key: 'privacy', label: 'Privacy', title: PRIVACY_TITLE, body: PRIVACY_BODY },
+  { key: 'terms', label: 'Terms', title: TERMS_TITLE, body: TERMS_BODY },
 ];
 
 // Bare image — mix-blend-mode: screen erases the PNG's baked-in black square
@@ -270,29 +246,17 @@ export default function Landing() {
         </div>
       </footer>
 
-      {modal ? (
-        <ContentModal item={FOOTER_LINKS.find((l) => l.key === modal)} onClose={() => setModal(null)} />
-      ) : null}
-    </div>
-  );
-}
-
-function ContentModal({ item, onClose }) {
-  if (!item) return null;
-  return (
-    <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm grid place-items-center p-4" onClick={onClose}>
-      <div
-        className="w-full max-w-[560px] max-h-[80vh] overflow-y-auto bg-[#0a0a0a] border border-[#27272a] rounded p-6 sm:p-7"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="flex items-start justify-between gap-4 mb-4">
-          <h2 className="text-[22px] font-extrabold tracking-tight">{item.title}</h2>
-          <button onClick={onClose} className="h-8 w-8 grid place-items-center rounded text-[#71717a] hover:text-white hover:bg-white/5" aria-label="Close">
-            <X size={18} />
-          </button>
-        </header>
-        <div className="text-[14.5px] leading-relaxed text-[#a1a1aa] font-normal space-y-3">{item.body}</div>
-      </div>
+      {modal ? (() => {
+        const item = FOOTER_LINKS.find((l) => l.key === modal);
+        if (!item) return null;
+        return (
+          <LegalModal
+            title={item.title}
+            body={item.body}
+            onClose={() => setModal(null)}
+          />
+        );
+      })() : null}
     </div>
   );
 }

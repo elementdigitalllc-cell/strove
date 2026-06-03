@@ -113,13 +113,33 @@ export function AuthProvider({ children }) {
     if (session) await loadProfileSafe(session);
   }
 
-  async function login(email, password) {
+  async function login(identifier, password) {
+    const id = (identifier || '').trim();
+    if (!id || !password) {
+      return { ok: false, error: 'Enter your username or email and password.' };
+    }
     try {
+      let emailToUse = id;
+
+      if (!id.includes('@')) {
+        const { data: row, error: lookupError } = await supabase
+          .from('profiles')
+          .select('email')
+          .ilike('username', id)
+          .maybeSingle();
+        if (lookupError) return { ok: false, error: lookupError.message };
+        if (!row?.email) {
+          return { ok: false, error: 'No account found for that username.' };
+        }
+        emailToUse = row.email;
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: emailToUse,
         password,
       });
       if (error) return { ok: false, error: error.message };
+
       setSession(data.session);
       if (data.session) await loadProfileSafe(data.session);
       return { ok: true };
@@ -128,37 +148,99 @@ export function AuthProvider({ children }) {
     }
   }
 
-  async function signup({ fullName, email, phone, username, password }) {
-    if (!fullName || !email || !username || !password) {
-      return { ok: false, error: 'Full name, email, username, and password are required.' };
+  function detectChannel(contact) {
+    const c = (contact || '').trim();
+    if (!c) return null;
+    if (c.includes('@')) return 'email';
+    // Phone: starts with + or is all digits (with optional spaces / dashes).
+    if (/^\+?[\d\s\-().]{7,}$/.test(c)) return 'phone';
+    return null;
+  }
+
+  function normalizePhone(raw) {
+    const cleaned = raw.replace(/[\s\-().]/g, '');
+    return cleaned.startsWith('+') ? cleaned : '+' + cleaned;
+  }
+
+  async function signup({ fullName, contact, username, password }) {
+    if (!fullName || !contact || !username || !password) {
+      return { ok: false, error: 'Full name, contact, username, and password are required.' };
     }
     if (password.length < 6) {
       return { ok: false, error: 'Password must be at least 6 characters.' };
     }
+
+    const channel = detectChannel(contact);
+    if (!channel) {
+      return { ok: false, error: 'Enter a valid email or phone number (with country code, e.g. +14155551234).' };
+    }
+
+    const meta = {
+      data: {
+        full_name: fullName.trim(),
+        username: username.trim().toLowerCase(),
+      },
+    };
+
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: {
-            full_name: fullName.trim(),
-            username: username.trim().toLowerCase(),
-            phone: phone?.trim(),
-          },
-        },
-      });
+      let payload;
+      let identifier;
+      if (channel === 'email') {
+        identifier = contact.trim();
+        payload = { email: identifier, password, options: meta };
+      } else {
+        identifier = normalizePhone(contact);
+        payload = { phone: identifier, password, options: meta };
+      }
+
+      const { data, error } = await supabase.auth.signUp(payload);
       if (error) return { ok: false, error: error.message };
       if (!data.user) return { ok: false, error: 'Sign-up failed — no user returned.' };
 
-      // Profile row inserted by on_auth_user_created trigger. No client insert.
       if (data.session) {
         setSession(data.session);
         await loadProfileSafe(data.session);
-        return { ok: true, confirmed: true };
+        return { ok: true, verified: true, channel, identifier };
       }
-      return { ok: true, confirmed: false };
+      return { ok: true, verified: false, channel, identifier };
     } catch (err) {
       return { ok: false, error: err?.message || 'Sign-up failed.' };
+    }
+  }
+
+  async function verifyOtp({ channel, identifier, token }) {
+    const code = (token || '').trim();
+    if (!/^\d{6}$/.test(code)) {
+      return { ok: false, error: 'Enter the 6-digit code.' };
+    }
+    try {
+      const payload =
+        channel === 'phone'
+          ? { phone: identifier, token: code, type: 'sms' }
+          : { email: identifier, token: code, type: 'email' };
+      const { data, error } = await supabase.auth.verifyOtp(payload);
+      if (error) return { ok: false, error: error.message };
+      if (data.session) {
+        setSession(data.session);
+        await loadProfileSafe(data.session);
+      }
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err?.message || 'Verification failed.' };
+    }
+  }
+
+  async function resendOtp({ channel, identifier }) {
+    try {
+      const payload =
+        channel === 'phone'
+          ? { type: 'sms', phone: identifier }
+          : { type: 'signup', email: identifier };
+      const { error } = await supabase.auth.resend(payload);
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err?.message || 'Could not resend code.' };
     }
   }
 
@@ -181,6 +263,8 @@ export function AuthProvider({ children }) {
         profileError,
         login,
         signup,
+        verifyOtp,
+        resendOtp,
         logout,
         refresh,
       }}
