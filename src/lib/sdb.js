@@ -78,11 +78,26 @@ export async function createPost({ user_id, content }) {
 
 /* ============ Likes ============ */
 
+async function changePostCount(postId, field, delta) {
+  const { error } = await supabase.rpc('change_post_count', {
+    post_id: postId,
+    field,
+    delta,
+  });
+  if (error) console.error('[sdb.changePostCount] error:', error);
+  return { error };
+}
+
 export async function likePost(userId, postId) {
   const { error } = await supabase
     .from('likes')
     .insert({ user_id: userId, post_id: postId });
-  return { error };
+  if (error) {
+    console.error('[sdb.likePost] insert error:', error);
+    return { error };
+  }
+  await changePostCount(postId, 'likes', 1);
+  return { error: null };
 }
 
 export async function unlikePost(userId, postId) {
@@ -91,7 +106,12 @@ export async function unlikePost(userId, postId) {
     .delete()
     .eq('user_id', userId)
     .eq('post_id', postId);
-  return { error };
+  if (error) {
+    console.error('[sdb.unlikePost] delete error:', error);
+    return { error };
+  }
+  await changePostCount(postId, 'likes', -1);
+  return { error: null };
 }
 
 export async function getLikedPostIds(userId) {
@@ -105,21 +125,34 @@ export async function getLikedPostIds(userId) {
 /* ============ Reposts ============ */
 
 export async function repostPost({ user_id, original_post_id, content }) {
+  console.log('[sdb.repostPost] inserting', { user_id, original_post_id });
   const { data, error } = await supabase
     .from('posts')
     .insert({ user_id, content, original_post_id, is_repost: true })
     .select('*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count)')
     .single();
-  return { data, error };
+  if (error) {
+    console.error('[sdb.repostPost] insert error:', error);
+    return { data, error };
+  }
+  await changePostCount(original_post_id, 'reposts', 1);
+  console.log('[sdb.repostPost] success', { newRowId: data?.id });
+  return { data, error: null };
 }
 
 export async function unrepost(userId, originalPostId) {
+  console.log('[sdb.unrepost] deleting', { userId, originalPostId });
   const { error } = await supabase
     .from('posts')
     .delete()
     .eq('user_id', userId)
     .eq('original_post_id', originalPostId);
-  return { error };
+  if (error) {
+    console.error('[sdb.unrepost] delete error:', error);
+    return { error };
+  }
+  await changePostCount(originalPostId, 'reposts', -1);
+  return { error: null };
 }
 
 export async function getRepostedOriginalIds(userId) {

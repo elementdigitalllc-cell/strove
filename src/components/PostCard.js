@@ -91,8 +91,14 @@ export default function PostCard({ post: initial }) {
         if (e.isIntersecting && !viewedRef.current) {
           viewedRef.current = true;
           viewedThisSession.add(post.id);
+          console.log('[PostCard.view] bumping views for', post.id);
           const { data, error } = await bumpPostInt(post.id, 'views');
-          if (!error && data) setPost((p) => ({ ...p, views: data.views }));
+          if (error) {
+            console.error('[PostCard.view] bumpPostInt error:', error);
+          } else {
+            console.log('[PostCard.view] new views =', data?.views);
+            if (data) setPost((p) => ({ ...p, views: data.views }));
+          }
           obs.disconnect();
         }
       });
@@ -117,18 +123,24 @@ export default function PostCard({ post: initial }) {
   }
 
   async function tapRepost() {
-    if (!user) return;
+    console.log('[PostCard.tapRepost] called', { user: user?.id, postId: post.id, reposted });
+    if (!user) {
+      console.warn('[PostCard.tapRepost] no user; aborting');
+      return;
+    }
     if (reposted) {
       const { error } = await unrepost(user.id, post.id);
+      console.log('[PostCard.tapRepost] unrepost result error =', error);
       if (error) return;
       setReposted(false);
       setPost((p) => ({ ...p, reposts: Math.max((p.reposts || 0) - 1, 0) }));
     } else {
-      const { error } = await repostPost({
+      const { data, error } = await repostPost({
         user_id: user.id,
         original_post_id: post.id,
         content: post.content || '',
       });
+      console.log('[PostCard.tapRepost] repost result', { data, error });
       if (error) return;
       setReposted(true);
       setPost((p) => ({ ...p, reposts: (p.reposts || 0) + 1 }));
