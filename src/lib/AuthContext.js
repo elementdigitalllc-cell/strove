@@ -223,7 +223,7 @@ export function AuthProvider({ children }) {
           code: error.code,
           full: error,
         });
-        return { ok: false, error: error.message };
+        return { ok: false, error: error.message, code: error.code, channel };
       }
       console.log('[AuthContext.signup] supabase.auth.signUp success =', {
         userId: data?.user?.id,

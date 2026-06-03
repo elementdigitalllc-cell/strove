@@ -18,6 +18,37 @@ function evaluatePassword(p) {
   return PASSWORD_RULES.map((r) => ({ ...r, met: r.test(p) }));
 }
 
+function detectContactKind(c) {
+  const s = (c || '').trim();
+  if (!s) return null;
+  if (s.includes('@')) return 'email';
+  if (/^\+?[\d\s\-().]{7,}$/.test(s)) return 'phone';
+  return null;
+}
+
+function classifyDuplicateError(result, contact) {
+  const msg = (result?.error || '').toLowerCase();
+  const code = (result?.code || '').toLowerCase();
+  const looksDuplicate =
+    code === 'user_already_exists' ||
+    code === 'user_repeated_signup' ||
+    code === 'phone_exists' ||
+    code === 'email_exists' ||
+    msg.includes('already registered') ||
+    msg.includes('already been registered') ||
+    msg.includes('user already registered') ||
+    msg.includes('user_repeated_signup') ||
+    (msg.includes('phone') && msg.includes('registered')) ||
+    (msg.includes('phone') && msg.includes('exists'));
+  if (!looksDuplicate) return null;
+  const phoneSignal =
+    result?.channel === 'phone' ||
+    msg.includes('phone') ||
+    code.includes('phone') ||
+    detectContactKind(contact) === 'phone';
+  return phoneSignal ? 'phone' : 'email';
+}
+
 export default function Signup() {
   const { signup, verifyOtp, resendOtp } = useAuth();
   const navigate = useNavigate();
@@ -29,6 +60,7 @@ export default function Signup() {
     username: '',
   });
   const [error, setError] = useState('');
+  const [duplicateAccount, setDuplicateAccount] = useState(null); // 'email' | 'phone' | null
   const [busy, setBusy] = useState(false);
   const [legalModal, setLegalModal] = useState(null);
   const [usernameError, setUsernameError] = useState('');
@@ -73,6 +105,7 @@ export default function Signup() {
   async function submit(e) {
     e.preventDefault();
     setError('');
+    setDuplicateAccount(null);
     if (!passwordValid) {
       return setError('Password does not meet the requirements below.');
     }
@@ -87,7 +120,14 @@ export default function Signup() {
     });
     setBusy(false);
     console.log('[Signup.submit] signup result =', result);
-    if (!result.ok) return setError(result.error);
+    if (!result.ok) {
+      const dupKind = classifyDuplicateError(result, form.contact);
+      if (dupKind) {
+        setDuplicateAccount(dupKind);
+        return;
+      }
+      return setError(result.error);
+    }
     if (result.verified) {
       navigate('/feed');
       return;
@@ -234,7 +274,18 @@ export default function Signup() {
             .
           </p>
 
-          {error ? (
+          {duplicateAccount ? (
+            <div className="text-[13px] text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-[8px] px-3 py-2">
+              {duplicateAccount === 'phone'
+                ? 'An account with this phone number already exists.'
+                : 'An account with this email already exists.'}{' '}
+              Please{' '}
+              <Link to="/login" className="text-orange font-semibold hover:underline">
+                log in
+              </Link>{' '}
+              instead.
+            </div>
+          ) : error ? (
             <div className="text-[13px] text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-[8px] px-3 py-2">
               {error}
             </div>
