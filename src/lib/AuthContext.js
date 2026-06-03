@@ -158,8 +158,12 @@ export function AuthProvider({ children }) {
   }
 
   function normalizePhone(raw) {
-    const cleaned = raw.replace(/[\s\-().]/g, '');
-    return cleaned.startsWith('+') ? cleaned : '+' + cleaned;
+    const stripped = (raw || '').replace(/[^\d+]/g, '');
+    if (stripped.startsWith('+')) return stripped;
+    const digits = stripped.replace(/\D/g, '');
+    if (digits.length === 10) return '+1' + digits;
+    if (digits.length === 11 && digits.startsWith('1')) return '+' + digits;
+    return '+' + digits;
   }
 
   function passwordPolicyError(p) {
