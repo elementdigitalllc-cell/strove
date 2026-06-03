@@ -138,10 +138,33 @@ const COMPETE_BODY = (
   </>
 );
 
+const SUPPORT_BODY = (
+  <>
+    <p>
+      Need help? Email{' '}
+      <a href="mailto:support@strove.app?subject=Strove%20Support%20Request" className="text-orange font-semibold hover:underline">
+        support@strove.app
+      </a>
+      . We reply within 24 hours.
+    </p>
+    <div>
+      <h3 className="text-white font-semibold text-[14px] mb-1">Quick answers</h3>
+      <ul className="list-disc pl-5 space-y-1.5">
+        <li><span className="text-white font-medium">Enter the Monthly Pot:</span> Compete tab → Enter the Pot for $1. Entries close on the 15th.</li>
+        <li><span className="text-white font-medium">Voting:</span> Paid competitors get one anonymous vote. Vote before the draw closes. No self-votes.</li>
+        <li><span className="text-white font-medium">No winner?</span> Under 100 qualified competitors → pot rolls to next month.</li>
+        <li><span className="text-white font-medium">Reset password:</span> Login page → Forgot password (email or phone).</li>
+        <li><span className="text-white font-medium">Delete account:</span> Profile → Settings → Delete Account.</li>
+      </ul>
+    </div>
+  </>
+);
+
 const FOOTER_LINKS = [
   { key: 'about', label: 'About', title: 'About Strove', body: ABOUT_BODY },
   { key: 'features', label: 'Features', title: 'Features', body: FEATURES_BODY },
   { key: 'compete', label: 'Compete', title: 'The Monthly Pot', body: COMPETE_BODY },
+  { key: 'support', label: 'Support', title: 'Help & Support', body: SUPPORT_BODY },
   { key: 'privacy', label: 'Privacy', title: PRIVACY_TITLE, body: PRIVACY_BODY },
   { key: 'terms', label: 'Terms', title: TERMS_TITLE, body: TERMS_BODY },
 ];
@@ -231,7 +254,7 @@ export default function Landing() {
         </div>
       </main>
 
-      <footer className="border-t border-[#0f0f0f] relative z-10">
+      <footer className="border-t border-[#0f0f0f] relative z-10 mt-20">
         <div className="max-w-[1280px] mx-auto px-6 lg:px-12 py-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13px] text-[#71717a]">
           {FOOTER_LINKS.map((l) => (
             <button
