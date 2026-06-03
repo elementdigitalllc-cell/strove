@@ -39,7 +39,7 @@ export default function Login() {
             autoCorrect="off"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
-            placeholder="Username or email"
+            placeholder="Username, email, or phone number"
           />
           <AuthInput
             type="password"

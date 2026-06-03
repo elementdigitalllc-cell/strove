@@ -126,81 +126,81 @@ export function AuthProvider({ children }) {
   }
 
   async function login(identifier, password) {
-    console.log('[AuthContext.login] raw input =', JSON.stringify(identifier));
     const id = (identifier || '').trim();
     console.log('[AuthContext.login] trimmed input =', JSON.stringify(id));
     if (!id || !password) {
-      return { ok: false, error: 'Enter your username or email and password.' };
+      return { ok: false, error: 'Enter your username, email, or phone, and password.' };
     }
-    try {
-      let emailToUse = id;
 
-      if (!id.includes('@')) {
-        const uname = id.toLowerCase();
-        console.log('[AuthContext.login] username lookup', {
-          rawInput: identifier,
-          trimmed: id,
-          lowercased: uname,
-        });
-        console.log(
-          '[AuthContext.login] query = supabase.from("profiles").select("id, username, email").eq("username",',
-          JSON.stringify(uname),
-          ').maybeSingle()'
-        );
-
-        const response = await supabase
-          .from('profiles')
-          .select('id, username, email')
-          .eq('username', uname)
-          .maybeSingle();
-        const { data: row, error: lookupError } = response;
-        console.log(
-          '[AuthContext.login] full supabase response =',
-          JSON.stringify(
-            {
-              data: row,
-              error: lookupError
-                ? {
-                    message: lookupError.message,
-                    code: lookupError.code,
-                    details: lookupError.details,
-                    hint: lookupError.hint,
-                  }
-                : null,
-              status: response.status,
-              statusText: response.statusText,
-              count: response.count,
-            },
-            null,
-            2
-          )
-        );
-
-        if (lookupError) return { ok: false, error: lookupError.message };
-        if (!row) {
-          return { ok: false, error: 'No account found for that username.' };
-        }
-        if (!row.email) {
-          return {
-            ok: false,
-            error:
-              'That username has no email on file yet. Run supabase-profile-contact-columns.sql in Supabase to populate the email column, or log in with your email address instead.',
-          };
-        }
-        emailToUse = row.email;
-        console.log('[AuthContext.login] resolved emailToUse =', emailToUse);
-      }
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: emailToUse,
-        password,
+    async function passwordSignIn(creds, label) {
+      console.log('[AuthContext.login] signInWithPassword via', label, '=', {
+        ...creds,
+        password: '***',
       });
-      if (error) return { ok: false, error: error.message };
-
+      const { data, error } = await supabase.auth.signInWithPassword(creds);
+      if (error) {
+        console.error('[AuthContext.login] signIn error =', error);
+        return { ok: false, error: error.message };
+      }
       setSession(data.session);
       if (data.session) await loadProfileSafe(data.session);
       return { ok: true };
+    }
+
+    try {
+      // Email path
+      if (id.includes('@')) {
+        return await passwordSignIn({ email: id, password }, 'email');
+      }
+
+      // Direct phone path
+      const inputChannel = detectChannel(id);
+      if (inputChannel === 'phone') {
+        const phone = normalizePhone(id);
+        return await passwordSignIn({ phone, password }, 'phone(direct)');
+      }
+
+      // Username path
+      const uname = id.toLowerCase();
+      console.log('[AuthContext.login] username lookup =', uname);
+      const response = await supabase
+        .from('profiles')
+        .select('id, username, email, phone')
+        .eq('username', uname)
+        .maybeSingle();
+      const { data: row, error: lookupError } = response;
+      console.log(
+        '[AuthContext.login] profiles lookup result =',
+        JSON.stringify(
+          {
+            data: row,
+            error: lookupError
+              ? {
+                  message: lookupError.message,
+                  code: lookupError.code,
+                  details: lookupError.details,
+                  hint: lookupError.hint,
+                }
+              : null,
+            status: response.status,
+          },
+          null,
+          2
+        )
+      );
+      if (lookupError) return { ok: false, error: lookupError.message };
+      if (!row) return { ok: false, error: 'No account found for that username' };
+
+      if (row.email) {
+        return await passwordSignIn({ email: row.email, password }, 'username->email');
+      }
+      if (row.phone) {
+        const phone = normalizePhone(row.phone);
+        return await passwordSignIn({ phone, password }, 'username->phone');
+      }
+      return { ok: false, error: 'No account found for that username' };
     } catch (err) {
+      console.error('[AuthContext.login] threw =', err);
       return { ok: false, error: err?.message || 'Login failed.' };
     }
   }
