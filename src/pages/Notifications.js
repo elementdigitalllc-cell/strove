@@ -19,11 +19,11 @@ function timeAgo(ts) {
   return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function excerpt(text) {
+function excerpt(text, limit = 40) {
   if (!text) return '';
   const trimmed = text.trim();
-  if (trimmed.length <= 50) return trimmed;
-  return trimmed.slice(0, 50).trimEnd() + '…';
+  if (trimmed.length <= limit) return trimmed;
+  return trimmed.slice(0, limit).trimEnd() + '…';
 }
 
 const ICON = { follow: UserPlus, like: Heart, comment: MessageCircle, repost: Repeat2 };
@@ -75,7 +75,8 @@ export default function Notifications() {
         const actor = n.actor || {};
         const handle = '@' + (actor.username || 'someone');
         const profileHref = '/profile/' + (actor.id || '');
-        const postSnippet = excerpt(n.post?.content);
+        const postSnippet = excerpt(n.post_content, 40);
+        const commentText = (n.comment_content || '').trim();
 
         let line;
         if (n.type === 'follow') {
@@ -89,7 +90,7 @@ export default function Notifications() {
           line = (
             <>
               <span className="font-semibold text-fg">{handle}</span>{' '}
-              <span className="text-muted">liked your post:</span>{' '}
+              <span className="text-muted">liked your post</span>{' '}
               {postSnippet ? <span className="text-fg">"{postSnippet}"</span> : null}
             </>
           );
@@ -97,7 +98,9 @@ export default function Notifications() {
           line = (
             <>
               <span className="font-semibold text-fg">{handle}</span>{' '}
-              <span className="text-muted">commented on your post:</span>{' '}
+              <span className="text-muted">commented:</span>{' '}
+              {commentText ? <span className="text-fg">"{commentText}"</span> : null}{' '}
+              <span className="text-muted">on your post</span>{' '}
               {postSnippet ? <span className="text-fg">"{postSnippet}"</span> : null}
             </>
           );
@@ -105,7 +108,7 @@ export default function Notifications() {
           line = (
             <>
               <span className="font-semibold text-fg">{handle}</span>{' '}
-              <span className="text-muted">reposted your post:</span>{' '}
+              <span className="text-muted">reposted your post</span>{' '}
               {postSnippet ? <span className="text-fg">"{postSnippet}"</span> : null}
             </>
           );
@@ -132,11 +135,6 @@ export default function Notifications() {
             </Link>
             <div className="flex-1 min-w-0">
               <div className="text-[14px] leading-snug">{line}</div>
-              {n.type === 'comment' && n.comment_content ? (
-                <div className="mt-1 text-[13px] text-muted bg-card border border-border rounded px-2.5 py-1.5">
-                  {n.comment_content}
-                </div>
-              ) : null}
             </div>
             <span className="text-[12px] text-muted shrink-0 mt-0.5">{timeAgo(n.created_at)}</span>
           </li>

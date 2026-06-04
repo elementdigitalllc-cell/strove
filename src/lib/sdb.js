@@ -216,22 +216,34 @@ export async function createNotification({ user_id, actor_id, type, post_id = nu
 }
 
 export async function getMyNotifications(userId, limit = 20) {
-  const { data, error } = await supabase
+  // 1) Pull notifications + actor profile.
+  const { data: notifs, error } = await supabase
     .from('notifications')
-    .select(
-      '*, actor:profiles!notifications_actor_id_fkey (id, username, full_name), post:posts!notifications_post_id_fkey (id, content)'
-    )
+    .select('*, actor:profiles!notifications_actor_id_fkey (id, username, full_name)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(limit);
+  console.log('[sdb.getMyNotifications] notifications =', notifs?.length, 'error =', error);
   if (error) return { data: [], error };
 
-  // For comment-type notifications, also fetch the actor's most recent
-  // comment on that post so the panel can show what they actually said.
-  const commentNotifs = (data || []).filter(
-    (n) => n.type === 'comment' && n.post_id && n.actor_id
-  );
-  if (commentNotifs.length > 0) {
+  const rows = notifs || [];
+
+  // 2) One query for every post referenced by a notification.
+  const postIds = [...new Set(rows.map((n) => n.post_id).filter(Boolean))];
+  let postMap = new Map();
+  if (postIds.length) {
+    const { data: posts, error: postsErr } = await supabase
+      .from('posts')
+      .select('id, content')
+      .in('id', postIds);
+    console.log('[sdb.getMyNotifications] joined posts =', posts?.length, 'error =', postsErr);
+    if (!postsErr) postMap = new Map((posts || []).map((p) => [p.id, p.content]));
+  }
+
+  // 3) Per-comment notification, fetch the actor's most recent comment on the post.
+  const commentNotifs = rows.filter((n) => n.type === 'comment' && n.post_id && n.actor_id);
+  const commentMap = new Map();
+  if (commentNotifs.length) {
     const pairs = await Promise.all(
       commentNotifs.map(async (n) => {
         const { data: c } = await supabase
@@ -245,17 +257,17 @@ export async function getMyNotifications(userId, limit = 20) {
         return [n.id, c?.content || null];
       })
     );
-    const commentMap = new Map(pairs);
-    return {
-      data: (data || []).map((n) => ({
-        ...n,
-        comment_content: commentMap.get(n.id) || null,
-      })),
-      error: null,
-    };
+    for (const [id, content] of pairs) commentMap.set(id, content);
   }
 
-  return { data: data || [], error: null };
+  return {
+    data: rows.map((n) => ({
+      ...n,
+      post_content: n.post_id ? postMap.get(n.post_id) || null : null,
+      comment_content: commentMap.get(n.id) || null,
+    })),
+    error: null,
+  };
 }
 
 export async function getUnreadNotificationCount(userId) {
