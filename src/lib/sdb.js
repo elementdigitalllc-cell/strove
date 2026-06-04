@@ -129,6 +129,28 @@ export async function deleteConversation(conversationId) {
   return { error };
 }
 
+export async function getUnreadMessageCount(userId) {
+  if (!userId) return { count: 0, error: null };
+  const { data: convos, error: convosErr } = await supabase
+    .from('conversations')
+    .select('id')
+    .or(`participant_1.eq.${userId},participant_2.eq.${userId}`);
+  if (convosErr) {
+    console.error('[sdb.getUnreadMessageCount] conversations error:', convosErr);
+    return { count: 0, error: convosErr };
+  }
+  const ids = (convos || []).map((c) => c.id);
+  if (ids.length === 0) return { count: 0, error: null };
+  const { count, error } = await supabase
+    .from('messages')
+    .select('id', { count: 'exact', head: true })
+    .eq('is_read', false)
+    .neq('sender_id', userId)
+    .in('conversation_id', ids);
+  if (error) console.error('[sdb.getUnreadMessageCount] messages error:', error);
+  return { count: count || 0, error };
+}
+
 export async function markConversationMessagesRead(conversationId, userId) {
   const { error } = await supabase
     .from('messages')

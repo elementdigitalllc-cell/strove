@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Trophy, Plus, Lock, User, Bell, MessageSquare, Search } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
-import { getUnreadNotificationCount } from '../lib/sdb';
+import { getUnreadNotificationCount, getUnreadMessageCount } from '../lib/sdb';
 import { supabase } from '../supabaseClient';
 import BrandLogo from './BrandLogo';
 import { cn } from '../lib/cn';
@@ -28,6 +28,7 @@ export default function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadDmCount, setUnreadDmCount] = useState(0);
 
   function onLogoClick(e) {
     e.preventDefault();
@@ -82,6 +83,41 @@ export default function AppShell() {
     };
   }, [user?.id, location.pathname]);
 
+  // Unread DM badge: poll + realtime on messages.
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    async function refresh() {
+      const { count } = await getUnreadMessageCount(user.id);
+      console.log('[AppShell.dms] unread count =', count);
+      if (!cancelled) setUnreadDmCount(count);
+    }
+    refresh();
+    const channel = supabase
+      .channel('dm-badge-' + user.id)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          // Refetch (cheap) so the count reflects RLS-visible rows for this user.
+          console.log('[AppShell.dms] realtime message INSERT', payload.new?.id);
+          if (!cancelled) refresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'messages' },
+        () => {
+          if (!cancelled) refresh();
+        }
+      )
+      .subscribe((status) => console.log('[AppShell.dms] channel status =', status));
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, location.pathname]);
+
   return (
     <div className="relative mx-auto max-w-[520px] min-h-dvh bg-bg flex flex-col">
       <header className="sticky top-0 z-30 flex items-center justify-between px-4 py-3 border-b border-border bg-bg/85 backdrop-blur">
@@ -106,8 +142,13 @@ export default function AppShell() {
               </span>
             ) : null}
           </NavLink>
-          <NavLink to="/messages" aria-label="Messages" className="h-8 w-8 grid place-items-center rounded text-muted hover:text-fg hover:bg-card transition-colors">
+          <NavLink to="/messages" aria-label="Messages" className="relative h-8 w-8 grid place-items-center rounded text-muted hover:text-fg hover:bg-card transition-colors">
             <MessageSquare size={18} strokeWidth={1.8} />
+            {unreadDmCount > 0 ? (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-orange text-black text-[10px] font-bold grid place-items-center leading-none">
+                {unreadDmCount > 9 ? '9+' : unreadDmCount}
+              </span>
+            ) : null}
           </NavLink>
           <NavLink to="/profile" className="h-8 w-8 rounded-full overflow-hidden grid place-items-center text-orange-400 font-bold text-sm bg-card border border-border" aria-label="Profile">
             <span>{(user?.full_name || user?.username || '?')[0].toUpperCase()}</span>
