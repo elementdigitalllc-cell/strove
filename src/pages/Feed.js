@@ -24,13 +24,17 @@ export default function Feed() {
   const [error, setError] = useState(null);
 
   const load = useCallback(async () => {
+    if (!user?.id) {
+      console.log('[Feed.load] skip: user not ready');
+      return;
+    }
     setLoading(true);
     setError(null);
     const [postsResult, followsResult, likedResult, repostedResult] = await Promise.all([
       getFeedPosts(),
-      user ? getFollowing(user.id) : Promise.resolve({ data: [] }),
-      user ? getLikedPostIds(user.id) : Promise.resolve({ data: [] }),
-      user ? getRepostedOriginalIds(user.id) : Promise.resolve({ data: [] }),
+      getFollowing(user.id),
+      getLikedPostIds(user.id),
+      getRepostedOriginalIds(user.id),
     ]);
     if (postsResult.error) {
       setError(postsResult.error);
@@ -69,6 +73,7 @@ export default function Feed() {
     // flash the previous user's likes/reposts before the new fetch resolves.
     setPosts([]);
     setFollowingSet(new Set());
+    if (!user?.id) return;
     load();
   }, [user?.id, load]);
 
