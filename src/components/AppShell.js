@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Trophy, Plus, Lock, User, Bell, MessageSquare } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { getUnreadNotificationCount } from '../lib/sdb';
@@ -26,7 +26,17 @@ const TITLES = {
 export default function AppShell() {
   const { user, profileError } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
+
+  function onLogoClick(e) {
+    e.preventDefault();
+    if (location.pathname === '/home') {
+      window.dispatchEvent(new CustomEvent('strove:refresh-feed'));
+    } else {
+      navigate('/home');
+    }
+  }
 
   const key = location.pathname.startsWith('/profile') ? '/profile' : location.pathname;
   const title = TITLES[key] || 'Strove';
@@ -75,10 +85,15 @@ export default function AppShell() {
   return (
     <div className="relative mx-auto max-w-[520px] min-h-dvh bg-bg flex flex-col">
       <header className="sticky top-0 z-30 flex items-center justify-between px-4 py-3 border-b border-border bg-bg/85 backdrop-blur">
-        <div className="flex items-center gap-2.5">
+        <a
+          href="/home"
+          onClick={onLogoClick}
+          className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 transition-opacity"
+          aria-label="Home"
+        >
           <BrandLogo size={28} />
           <span className="text-[17px] font-bold tracking-tight">{title}</span>
-        </div>
+        </a>
         <div className="flex items-center gap-1.5">
           <NavLink to="/notifications" aria-label="Notifications" className="relative h-8 w-8 grid place-items-center rounded text-muted hover:text-fg hover:bg-card transition-colors">
             <Bell size={18} strokeWidth={1.8} />

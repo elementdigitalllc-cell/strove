@@ -77,6 +77,17 @@ export default function Feed() {
     load();
   }, [user?.id, load]);
 
+  // AppShell dispatches this when the user clicks the Strove logo while
+  // already on /home. Re-run the feed query to refresh.
+  useEffect(() => {
+    function onRefresh() {
+      console.log('[Feed] strove:refresh-feed received');
+      load();
+    }
+    window.addEventListener('strove:refresh-feed', onRefresh);
+    return () => window.removeEventListener('strove:refresh-feed', onRefresh);
+  }, [load]);
+
   async function toggleFollow(targetId) {
     if (!user || targetId === user.id) return;
     const isFollowing = followingSet.has(targetId);
