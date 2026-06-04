@@ -753,6 +753,36 @@ export async function getFollowers(targetId) {
   return { data: (data || []).map((r) => r.follower_id), error };
 }
 
+export async function getFollowerProfiles(targetId) {
+  const { data: ids, error: idsErr } = await supabase
+    .from('follows')
+    .select('follower_id')
+    .eq('following_id', targetId);
+  if (idsErr) return { data: [], error: idsErr };
+  const list = (ids || []).map((r) => r.follower_id);
+  if (list.length === 0) return { data: [], error: null };
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, username, full_name, streak_count')
+    .in('id', list);
+  return { data: data || [], error };
+}
+
+export async function getFollowingProfiles(userId) {
+  const { data: ids, error: idsErr } = await supabase
+    .from('follows')
+    .select('following_id')
+    .eq('follower_id', userId);
+  if (idsErr) return { data: [], error: idsErr };
+  const list = (ids || []).map((r) => r.following_id);
+  if (list.length === 0) return { data: [], error: null };
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, username, full_name, streak_count')
+    .in('id', list);
+  return { data: data || [], error };
+}
+
 export async function follow(followerId, followingId) {
   const { error } = await supabase
     .from('follows')

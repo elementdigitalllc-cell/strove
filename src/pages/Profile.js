@@ -8,6 +8,8 @@ import {
   getPostsByUser,
   getFollowers,
   getFollowing,
+  getFollowerProfiles,
+  getFollowingProfiles,
   getOrCreateConversation,
   follow,
   unfollow,
@@ -41,6 +43,7 @@ export default function Profile() {
   const [error, setError] = useState(null);
   const [editing, setEditing] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [listMode, setListMode] = useState(null); // 'followers' | 'following' | null
 
   const load = useCallback(async () => {
     if (!targetId || !me) return;
@@ -94,6 +97,21 @@ export default function Profile() {
       await follow(me.id, target.id);
       setMyFollowing((p) => [...p, target.id]);
       setFollowers((p) => [...p, me.id]);
+    }
+  }
+
+  async function toggleFollowFor(profileId) {
+    if (!me?.id || profileId === me.id) return;
+    if (myFollowing.includes(profileId)) {
+      const { error } = await unfollow(me.id, profileId);
+      if (error) return;
+      setMyFollowing((p) => p.filter((x) => x !== profileId));
+      if (profileId === target.id) setFollowers((p) => p.filter((x) => x !== me.id));
+    } else {
+      const { error } = await follow(me.id, profileId);
+      if (error) return;
+      setMyFollowing((p) => [...p, profileId]);
+      if (profileId === target.id) setFollowers((p) => [...p, me.id]);
     }
   }
 
@@ -152,9 +170,9 @@ export default function Profile() {
         <div className="flex items-center gap-4 text-sm">
           <Stat label="Posts" value={posts.length} />
           <Sep />
-          <Stat label="Followers" value={followers.length} />
+          <Stat label="Followers" value={followers.length} onClick={() => setListMode('followers')} />
           <Sep />
-          <Stat label="Following" value={followingList.length} />
+          <Stat label="Following" value={followingList.length} onClick={() => setListMode('following')} />
         </div>
 
         <div className="text-[12px] text-muted font-normal">Joined {fmtJoined(target.joined_at)}</div>
@@ -184,11 +202,104 @@ export default function Profile() {
       {settingsOpen ? (
         <SettingsModal user={target} onClose={() => setSettingsOpen(false)} onLogout={async () => { setSettingsOpen(false); await logout(); }} onOpenSupport={() => { setSettingsOpen(false); navigate('/support'); }} />
       ) : null}
+      {listMode ? (
+        <FollowListModal
+          mode={listMode}
+          targetId={target.id}
+          currentUserId={me?.id}
+          myFollowing={myFollowing}
+          onToggleFollow={toggleFollowFor}
+          onClose={() => setListMode(null)}
+          onNavigate={(id) => { setListMode(null); navigate('/profile/' + id); }}
+        />
+      ) : null}
     </div>
   );
 }
 
-function Stat({ label, value }) {
+function FollowListModal({ mode, targetId, currentUserId, myFollowing, onToggleFollow, onClose, onNavigate }) {
+  const [loading, setLoading] = useState(true);
+  const [list, setList] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const fn = mode === 'followers' ? getFollowerProfiles : getFollowingProfiles;
+      const { data } = await fn(targetId);
+      if (cancelled) return;
+      setList(data || []);
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [mode, targetId]);
+
+  const title = mode === 'followers' ? 'Followers' : 'Following';
+
+  return (
+    <Modal title={title} onClose={onClose}>
+      {loading ? (
+        <div className="text-center text-muted py-6 text-sm">Loading…</div>
+      ) : list.length === 0 ? (
+        <div className="text-center text-muted py-6 text-sm">
+          {mode === 'followers' ? 'No followers yet.' : 'Not following anyone yet.'}
+        </div>
+      ) : (
+        <ul className="flex flex-col -mx-2">
+          {list.map((p) => {
+            const isMe = p.id === currentUserId;
+            const isFollowing = myFollowing.includes(p.id);
+            return (
+              <li
+                key={p.id}
+                className="flex items-center gap-3 px-2 py-2.5 rounded hover:bg-bg/40 transition-colors"
+              >
+                <button
+                  type="button"
+                  onClick={() => onNavigate(p.id)}
+                  className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                >
+                  <Avatar name={p.full_name || p.username || '?'} size="md" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-fg text-[14.5px] truncate">
+                      {p.full_name || p.username}
+                    </div>
+                    <div className="text-[13px] text-muted font-medium truncate">
+                      @{p.username}
+                    </div>
+                  </div>
+                </button>
+                {!isMe ? (
+                  <Button
+                    size="sm"
+                    variant={isFollowing ? 'outline' : 'primary'}
+                    onClick={() => onToggleFollow(p.id)}
+                  >
+                    {isFollowing ? 'Following' : 'Follow'}
+                  </Button>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Modal>
+  );
+}
+
+function Stat({ label, value, onClick }) {
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex flex-col text-left hover:opacity-80 transition-opacity"
+      >
+        <strong className="text-base font-extrabold leading-none">{value}</strong>
+        <span className="text-[11px] uppercase tracking-wider text-muted font-semibold mt-1">{label}</span>
+      </button>
+    );
+  }
   return (
     <div className="flex flex-col">
       <strong className="text-base font-extrabold leading-none">{value}</strong>
