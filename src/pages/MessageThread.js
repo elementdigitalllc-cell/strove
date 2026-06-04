@@ -128,15 +128,9 @@ export default function MessageThread() {
     return () => supabase.removeChannel(channel);
   }, [conversationId, user?.id]);
 
-  const didInitialScrollRef = useRef(false);
   useEffect(() => {
-    if (loading || messages.length === 0) return;
-    bottomRef.current?.scrollIntoView({
-      behavior: didInitialScrollRef.current ? 'smooth' : 'instant',
-      block: 'end',
-    });
-    didInitialScrollRef.current = true;
-  }, [messages.length, loading]);
+    bottomRef.current?.scrollIntoView({ behavior: 'instant' });
+  }, [messages]);
 
   async function submit(e) {
     e.preventDefault();
