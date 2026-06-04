@@ -83,38 +83,45 @@ export default function AppShell() {
     };
   }, [user?.id, location.pathname]);
 
-  // Unread DM badge: poll + realtime on messages.
+  // Unread DM badge: realtime on messages + explicit refresh event from
+  // MessageThread after mark-as-read finishes.
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
-    async function refresh() {
+    async function refresh(reason) {
       const { count } = await getUnreadMessageCount(user.id);
-      console.log('[AppShell.dms] unread count =', count);
+      console.log('[AppShell.dms] refresh (' + reason + ') -> count =', count);
       if (!cancelled) setUnreadDmCount(count);
     }
-    refresh();
+    refresh('mount');
+
     const channel = supabase
       .channel('dm-badge-' + user.id)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload) => {
-          // Refetch (cheap) so the count reflects RLS-visible rows for this user.
-          console.log('[AppShell.dms] realtime message INSERT', payload.new?.id);
-          if (!cancelled) refresh();
+          console.log('[AppShell.dms] realtime INSERT', payload.new?.id);
+          if (!cancelled) refresh('insert');
         }
       )
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'messages' },
-        () => {
-          if (!cancelled) refresh();
+        (payload) => {
+          console.log('[AppShell.dms] realtime UPDATE', payload.new?.id);
+          if (!cancelled) refresh('update');
         }
       )
       .subscribe((status) => console.log('[AppShell.dms] channel status =', status));
+
+    function onCustom() { refresh('custom-event'); }
+    window.addEventListener('strove:refresh-dm-badge', onCustom);
+
     return () => {
       cancelled = true;
       supabase.removeChannel(channel);
+      window.removeEventListener('strove:refresh-dm-badge', onCustom);
     };
   }, [user?.id, location.pathname]);
 

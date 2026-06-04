@@ -139,26 +139,41 @@ export async function getUnreadMessageCount(userId) {
     console.error('[sdb.getUnreadMessageCount] conversations error:', convosErr);
     return { count: 0, error: convosErr };
   }
-  const ids = (convos || []).map((c) => c.id);
+  const ids = [...new Set((convos || []).map((c) => c.id))];
+  console.log('[sdb.getUnreadMessageCount] userId =', userId, 'convoIds =', ids);
   if (ids.length === 0) return { count: 0, error: null };
-  const { count, error } = await supabase
+  const { data: rows, count, error } = await supabase
     .from('messages')
-    .select('id', { count: 'exact', head: true })
+    .select('id, conversation_id, sender_id, is_read', { count: 'exact' })
     .eq('is_read', false)
     .neq('sender_id', userId)
     .in('conversation_id', ids);
   if (error) console.error('[sdb.getUnreadMessageCount] messages error:', error);
+  console.log(
+    '[sdb.getUnreadMessageCount] raw count =', count,
+    'rows.length =', rows?.length,
+    'sample =', (rows || []).slice(0, 5)
+  );
   return { count: count || 0, error };
 }
 
 export async function markConversationMessagesRead(conversationId, userId) {
-  const { error } = await supabase
+  console.log('[sdb.markConversationMessagesRead] start', { conversationId, userId });
+  const { data, error } = await supabase
     .from('messages')
     .update({ is_read: true })
     .eq('conversation_id', conversationId)
     .neq('sender_id', userId)
-    .eq('is_read', false);
-  return { error };
+    .eq('is_read', false)
+    .select('id');
+  if (error) console.error('[sdb.markConversationMessagesRead] error:', error);
+  console.log(
+    '[sdb.markConversationMessagesRead] updated',
+    data?.length || 0,
+    'rows; ids =',
+    (data || []).map((r) => r.id)
+  );
+  return { error, updatedCount: data?.length || 0 };
 }
 
 export async function searchProfiles(query, limit = 20) {

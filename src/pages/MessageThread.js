@@ -39,7 +39,9 @@ export default function MessageThread() {
       setConversation(convo);
       setMessages(msgs);
       setLoading(false);
-      markConversationMessagesRead(conversationId, user.id);
+      const { updatedCount } = await markConversationMessagesRead(conversationId, user.id);
+      console.log('[MessageThread] mark-as-read updated rows =', updatedCount);
+      window.dispatchEvent(new CustomEvent('strove:refresh-dm-badge'));
     })();
     return () => { cancelled = true; };
   }, [conversationId, user?.id, navigate]);
@@ -63,7 +65,10 @@ export default function MessageThread() {
             prev.some((m) => m.id === payload.new.id) ? prev : [...prev, payload.new]
           );
           if (payload.new.sender_id !== user.id) {
-            markConversationMessagesRead(conversationId, user.id);
+            (async () => {
+              await markConversationMessagesRead(conversationId, user.id);
+              window.dispatchEvent(new CustomEvent('strove:refresh-dm-badge'));
+            })();
           }
         }
       )
