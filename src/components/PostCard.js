@@ -191,15 +191,16 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow })
       console.error('[PostCard.submitReply] error:', error);
       return;
     }
+    const replyTarget = replyTo;
     setReplyDraft('');
     setReplyTo(null);
     setComments((c) => [...c, data]);
     setPost((p) => ({ ...p, comments: (p.comments || 0) + 1 }));
-    if (replyTo.user_id) {
+    if (replyTarget.user_id) {
       createNotification({
-        user_id: replyTo.user_id,
+        user_id: replyTarget.user_id,
         actor_id: user.id,
-        type: 'comment',
+        type: 'reply',
         post_id: post.id,
       });
     }
@@ -235,6 +236,14 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow })
       setComments((all) =>
         all.map((x) => (x.id === c.id ? { ...x, likes: (x.likes || 0) + 1 } : x))
       );
+      if (c.user_id && c.user_id !== user.id) {
+        createNotification({
+          user_id: c.user_id,
+          actor_id: user.id,
+          type: 'comment_like',
+          post_id: post.id,
+        });
+      }
     }
   }
 

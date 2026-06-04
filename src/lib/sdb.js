@@ -240,31 +240,54 @@ export async function getMyNotifications(userId, limit = 20) {
     if (!postsErr) postMap = new Map((posts || []).map((p) => [p.id, p.content]));
   }
 
-  // 3) Per-comment notification, fetch the actor's most recent comment on the post.
-  const commentNotifs = rows.filter((n) => n.type === 'comment' && n.post_id && n.actor_id);
+  // 3) Per type, fetch the relevant comment content.
+  // - 'comment'      → actor's most recent comment on the post (their comment text)
+  // - 'reply'        → actor's most recent comment on the post (the reply text)
+  // - 'comment_like' → recipient's most recent comment on the post (the comment that was liked)
   const commentMap = new Map();
-  if (commentNotifs.length) {
-    const pairs = await Promise.all(
-      commentNotifs.map(async (n) => {
-        const { data: c } = await supabase
-          .from('comments')
-          .select('content')
-          .eq('post_id', n.post_id)
-          .eq('user_id', n.actor_id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        return [n.id, c?.content || null];
-      })
-    );
-    for (const [id, content] of pairs) commentMap.set(id, content);
-  }
+  const replyMap = new Map();
+  const likedCommentMap = new Map();
+
+  const actorCommentNotifs = rows.filter(
+    (n) => (n.type === 'comment' || n.type === 'reply') && n.post_id && n.actor_id
+  );
+  const commentLikeNotifs = rows.filter(
+    (n) => n.type === 'comment_like' && n.post_id && n.user_id
+  );
+
+  await Promise.all([
+    ...actorCommentNotifs.map(async (n) => {
+      const { data: c } = await supabase
+        .from('comments')
+        .select('content')
+        .eq('post_id', n.post_id)
+        .eq('user_id', n.actor_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (n.type === 'reply') replyMap.set(n.id, c?.content || null);
+      else commentMap.set(n.id, c?.content || null);
+    }),
+    ...commentLikeNotifs.map(async (n) => {
+      const { data: c } = await supabase
+        .from('comments')
+        .select('content')
+        .eq('post_id', n.post_id)
+        .eq('user_id', n.user_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      likedCommentMap.set(n.id, c?.content || null);
+    }),
+  ]);
 
   return {
     data: rows.map((n) => ({
       ...n,
       post_content: n.post_id ? postMap.get(n.post_id) || null : null,
       comment_content: commentMap.get(n.id) || null,
+      reply_content: replyMap.get(n.id) || null,
+      liked_comment_content: likedCommentMap.get(n.id) || null,
     })),
     error: null,
   };
@@ -389,6 +412,7 @@ export async function listComments(postId) {
     .from('comments')
     .select('id, post_id, user_id, content, created_at, likes, parent_comment_id, profiles:profiles!comments_user_id_fkey (id, username, full_name)')
     .eq('post_id', postId)
+    .order('likes', { ascending: false })
     .order('created_at', { ascending: true });
   return { data: data || [], error };
 }

@@ -14,12 +14,21 @@ function excerpt(text, limit = 40) {
   return trimmed.slice(0, limit).trimEnd() + '…';
 }
 
-const ICON = { follow: UserPlus, like: Heart, comment: MessageCircle, repost: Repeat2 };
+const ICON = {
+  follow: UserPlus,
+  like: Heart,
+  comment: MessageCircle,
+  repost: Repeat2,
+  comment_like: Heart,
+  reply: MessageCircle,
+};
 const ICON_COLOR = {
   follow: 'text-orange',
   like: 'text-red-500',
   comment: 'text-orange',
   repost: 'text-emerald-400',
+  comment_like: 'text-red-500',
+  reply: 'text-orange',
 };
 
 export default function Notifications() {
@@ -98,6 +107,24 @@ export default function Notifications() {
               <span className="font-semibold text-fg">{handle}</span>{' '}
               <span className="text-muted">reposted your post</span>{' '}
               {postSnippet ? <span className="text-fg">"{postSnippet}"</span> : null}
+            </>
+          );
+        } else if (n.type === 'comment_like') {
+          const likedSnippet = excerpt(n.liked_comment_content, 40);
+          line = (
+            <>
+              <span className="font-semibold text-fg">{handle}</span>{' '}
+              <span className="text-muted">liked your comment:</span>{' '}
+              {likedSnippet ? <span className="text-fg">"{likedSnippet}"</span> : null}
+            </>
+          );
+        } else if (n.type === 'reply') {
+          const replyText = (n.reply_content || '').trim();
+          line = (
+            <>
+              <span className="font-semibold text-fg">{handle}</span>{' '}
+              <span className="text-muted">replied to your comment:</span>{' '}
+              {replyText ? <span className="text-fg">"{replyText}"</span> : null}
             </>
           );
         } else {
