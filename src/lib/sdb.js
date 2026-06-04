@@ -215,14 +215,47 @@ export async function createNotification({ user_id, actor_id, type, post_id = nu
   return { error: response.error };
 }
 
-export async function getMyNotifications(userId, limit = 50) {
+export async function getMyNotifications(userId, limit = 20) {
   const { data, error } = await supabase
     .from('notifications')
-    .select('*, actor:profiles!notifications_actor_id_fkey (id, username, full_name)')
+    .select(
+      '*, actor:profiles!notifications_actor_id_fkey (id, username, full_name), post:posts!notifications_post_id_fkey (id, content)'
+    )
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(limit);
-  return { data: data || [], error };
+  if (error) return { data: [], error };
+
+  // For comment-type notifications, also fetch the actor's most recent
+  // comment on that post so the panel can show what they actually said.
+  const commentNotifs = (data || []).filter(
+    (n) => n.type === 'comment' && n.post_id && n.actor_id
+  );
+  if (commentNotifs.length > 0) {
+    const pairs = await Promise.all(
+      commentNotifs.map(async (n) => {
+        const { data: c } = await supabase
+          .from('comments')
+          .select('content')
+          .eq('post_id', n.post_id)
+          .eq('user_id', n.actor_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        return [n.id, c?.content || null];
+      })
+    );
+    const commentMap = new Map(pairs);
+    return {
+      data: (data || []).map((n) => ({
+        ...n,
+        comment_content: commentMap.get(n.id) || null,
+      })),
+      error: null,
+    };
+  }
+
+  return { data: data || [], error: null };
 }
 
 export async function getUnreadNotificationCount(userId) {
