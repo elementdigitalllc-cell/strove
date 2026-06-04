@@ -22,7 +22,7 @@ export default function MessageThread() {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
-  const bottomRef = useRef(null);
+  const scrollContainerRef = useRef(null);
 
   useEffect(() => {
     if (!user?.id || !conversationId) return;
@@ -129,11 +129,8 @@ export default function MessageThread() {
   }, [conversationId, user?.id]);
 
   useEffect(() => {
-    if (messages.length > 0) {
-      const t = setTimeout(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'instant' });
-      }, 50);
-      return () => clearTimeout(t);
+    if (scrollContainerRef.current && messages.length > 0) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -200,7 +197,10 @@ export default function MessageThread() {
         </Link>
       </div>
 
-      <div className="flex-1 px-4 py-4 flex flex-col gap-2 overflow-y-auto">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 px-4 py-4 flex flex-col gap-2 overflow-y-auto"
+      >
         {loading ? (
           <LoadingBlock label="Loading messages…" />
         ) : messages.length === 0 ? (
@@ -236,7 +236,6 @@ export default function MessageThread() {
             );
           })
         )}
-        <div ref={bottomRef} />
       </div>
 
       <form
