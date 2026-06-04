@@ -129,11 +129,11 @@ export default function MessageThread() {
   }, [conversationId, user?.id]);
 
   useEffect(() => {
-    if (messages.length === 0) return;
+    if (loading || messages.length === 0) return;
     setTimeout(() => {
       bottomRef.current?.scrollIntoView();
     }, 100);
-  }, [messages]);
+  }, [messages, loading]);
 
   async function submit(e) {
     e.preventDefault();
