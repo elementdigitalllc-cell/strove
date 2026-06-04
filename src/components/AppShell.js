@@ -114,11 +114,9 @@ export default function AppShell() {
 
     function onCustom(ev) {
       const delta = Number(ev?.detail?.delta) || 0;
-      console.log('[AppShell.dms] custom event delta =', delta);
       if (delta > 0) {
         setUnreadDmCount((prev) => Math.max(0, prev - delta));
       }
-      refresh('custom-event');
     }
     window.addEventListener('strove:refresh-dm-badge', onCustom);
 
