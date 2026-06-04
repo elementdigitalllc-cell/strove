@@ -153,6 +153,7 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow })
     e.preventDefault();
     const content = commentDraft.trim();
     if (!content || !user) return;
+    if (commentSubmitting) return; // guard against double-fire (enter + click)
     setCommentSubmitting(true);
     const { data, error } = await createComment({
       post_id: post.id,
@@ -167,18 +168,21 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow })
     setCommentDraft('');
     setComments((c) => [...c, data]);
     setPost((p) => ({ ...p, comments: (p.comments || 0) + 1 }));
-    createNotification({
-      user_id: post.user_id,
-      actor_id: user.id,
-      type: 'comment',
-      post_id: post.id,
-    });
+    if (post.user_id && post.user_id !== user.id) {
+      createNotification({
+        user_id: post.user_id,
+        actor_id: user.id,
+        type: 'comment',
+        post_id: post.id,
+      });
+    }
   }
 
   async function submitReply(e) {
     e.preventDefault();
     const content = replyDraft.trim();
     if (!content || !user || !replyTo) return;
+    if (replySubmitting) return;
     setReplySubmitting(true);
     const { data, error } = await createComment({
       post_id: post.id,
