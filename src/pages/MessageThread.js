@@ -129,9 +129,7 @@ export default function MessageThread() {
 
   useEffect(() => {
     const el = document.getElementById('messages-scroll');
-    if (el && messages.length > 0) {
-      el.scrollTop = el.scrollHeight;
-    }
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
   async function submit(e) {
@@ -176,7 +174,7 @@ export default function MessageThread() {
     .find((m) => m.sender_id === user?.id && !m._pending)?.id;
 
   return (
-    <div className="-mx-4 flex flex-col h-[calc(100dvh-57px-96px)]">
+    <div className="-mx-4 flex flex-col h-[calc(100dvh-57px)] overflow-hidden">
       <div className="border-b border-border px-4 py-3 flex items-center gap-3">
         <button
           type="button"
@@ -197,7 +195,7 @@ export default function MessageThread() {
         </Link>
       </div>
 
-      <div id="messages-scroll" className="flex-1 px-4 py-4 flex flex-col gap-2 overflow-y-auto">
+      <div id="messages-scroll" className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-2">
         {loading ? (
           <LoadingBlock label="Loading messages…" />
         ) : messages.length === 0 ? (
