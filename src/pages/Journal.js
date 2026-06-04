@@ -6,6 +6,7 @@ import { Textarea } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { LoadingBlock, ErrorBlock, Toast } from '../components/ui/States';
 import { cn } from '../lib/cn';
+import { timeAgo } from '../lib/time';
 
 const AI = [
   (u, posts) => posts.length === 0
@@ -17,15 +18,6 @@ const AI = [
   () => 'Public accountability hits 3x harder than private journaling. Post one update this week.',
   () => 'Energy management beats time management. Note what time of day you actually got the rep in.',
 ];
-
-function timeAgo(ts) {
-  const m = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
-  if (m < 1) return 'now';
-  if (m < 60) return m + 'm ago';
-  const h = Math.floor(m / 60);
-  if (h < 24) return h + 'h ago';
-  return Math.floor(h / 24) + 'd ago';
-}
 
 export default function Journal() {
   const { user } = useAuth();
