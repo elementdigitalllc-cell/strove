@@ -95,6 +95,8 @@ export default function AppShell() {
     }
     refresh('mount');
 
+    // Only INSERT — UPDATE events (mark-as-read) would re-trigger a refetch
+    // that races against our optimistic-zero state and brings the badge back.
     const channel = supabase
       .channel('dm-badge-' + user.id)
       .on(
@@ -102,15 +104,10 @@ export default function AppShell() {
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload) => {
           console.log('[AppShell.dms] realtime INSERT', payload.new?.id);
-          if (!cancelled) refresh('insert');
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'messages' },
-        (payload) => {
-          console.log('[AppShell.dms] realtime UPDATE', payload.new?.id);
-          if (!cancelled) refresh('update');
+          if (cancelled) return;
+          // Only refresh if this insert is from someone else (others' messages
+          // are the only ones that can increase your unread count).
+          if (payload.new?.sender_id !== user.id) refresh('insert');
         }
       )
       .subscribe((status) => console.log('[AppShell.dms] channel status =', status));
