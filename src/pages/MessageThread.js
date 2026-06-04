@@ -129,7 +129,12 @@ export default function MessageThread() {
   }, [conversationId, user?.id]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'instant' });
+    if (messages.length > 0) {
+      const t = setTimeout(() => {
+        bottomRef.current?.scrollIntoView({ behavior: 'instant' });
+      }, 50);
+      return () => clearTimeout(t);
+    }
   }, [messages]);
 
   async function submit(e) {
@@ -195,46 +200,44 @@ export default function MessageThread() {
         </Link>
       </div>
 
-      {loading ? (
-        <LoadingBlock label="Loading messages…" />
-      ) : (
-        <div className="flex-1 px-4 py-4 flex flex-col gap-2 overflow-y-auto">
-          {messages.length === 0 ? (
-            <p className="text-center text-sm text-muted py-8">
-              Say hello to {otherName}.
-            </p>
-          ) : (
-            messages.map((m) => {
-              const mine = m.sender_id === user?.id;
-              const showReceipt = mine && m.id === lastMineId;
-              return (
-                <div key={m.id} className="flex flex-col">
-                  <div className={'flex ' + (mine ? 'justify-end' : 'justify-start')}>
-                    <div
-                      className={
-                        'max-w-[78%] px-3.5 py-2 rounded-[18px] text-[14.5px] leading-snug whitespace-pre-wrap break-words ' +
-                        (mine
-                          ? 'bg-orange text-black rounded-br-md'
-                          : 'bg-card text-fg border border-border rounded-bl-md')
-                      }
-                    >
-                      {m.content}
-                    </div>
+      <div className="flex-1 px-4 py-4 flex flex-col gap-2 overflow-y-auto">
+        {loading ? (
+          <LoadingBlock label="Loading messages…" />
+        ) : messages.length === 0 ? (
+          <p className="text-center text-sm text-muted py-8">
+            Say hello to {otherName}.
+          </p>
+        ) : (
+          messages.map((m) => {
+            const mine = m.sender_id === user?.id;
+            const showReceipt = mine && m.id === lastMineId;
+            return (
+              <div key={m.id} className="flex flex-col">
+                <div className={'flex ' + (mine ? 'justify-end' : 'justify-start')}>
+                  <div
+                    className={
+                      'max-w-[78%] px-3.5 py-2 rounded-[18px] text-[14.5px] leading-snug whitespace-pre-wrap break-words ' +
+                      (mine
+                        ? 'bg-orange text-black rounded-br-md'
+                        : 'bg-card text-fg border border-border rounded-bl-md')
+                    }
+                  >
+                    {m.content}
                   </div>
-                  {showReceipt ? (
-                    <div className="self-end mt-1 mr-1 text-[11px] text-muted">
-                      {m.is_read
-                        ? 'Read' + (m.read_at ? ' ' + timeAgo(m.read_at) : '')
-                        : 'Delivered'}
-                    </div>
-                  ) : null}
                 </div>
-              );
-            })
-          )}
-          <div ref={bottomRef} />
-        </div>
-      )}
+                {showReceipt ? (
+                  <div className="self-end mt-1 mr-1 text-[11px] text-muted">
+                    {m.is_read
+                      ? 'Read' + (m.read_at ? ' ' + timeAgo(m.read_at) : '')
+                      : 'Delivered'}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })
+        )}
+        <div ref={bottomRef} />
+      </div>
 
       <form
         onSubmit={submit}
