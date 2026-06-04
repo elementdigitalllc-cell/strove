@@ -15,6 +15,7 @@ import Support from './pages/Support';
 import Notifications from './pages/Notifications';
 import Messages from './pages/Messages';
 import PostDetail from './pages/PostDetail';
+import Search from './pages/Search';
 import './App.css';
 
 function Protected({ children }) {
@@ -54,6 +55,7 @@ export default function App() {
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/post/:postId" element={<PostDetail />} />
+            <Route path="/search" element={<Search />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

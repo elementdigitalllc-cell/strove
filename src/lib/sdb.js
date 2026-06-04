@@ -20,6 +20,18 @@ export async function getProfileByUsername(username) {
   return { data, error };
 }
 
+export async function searchProfiles(query, limit = 20) {
+  const q = (query || '').trim();
+  if (!q) return { data: [], error: null };
+  const pattern = '%' + q.replace(/[%_]/g, (m) => '\\' + m) + '%';
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, username, full_name, streak_count')
+    .or('username.ilike.' + pattern + ',full_name.ilike.' + pattern)
+    .limit(limit);
+  return { data: data || [], error };
+}
+
 export async function getAllProfiles() {
   const { data, error } = await supabase
     .from('profiles')

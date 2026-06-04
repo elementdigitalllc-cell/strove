@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Trophy, Plus, Lock, User, Bell, MessageSquare } from 'lucide-react';
+import { Home, Trophy, Plus, Lock, User, Bell, MessageSquare, Search } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { getUnreadNotificationCount } from '../lib/sdb';
 import { supabase } from '../supabaseClient';
@@ -95,6 +95,9 @@ export default function AppShell() {
           <span className="text-[17px] font-bold tracking-tight">{title}</span>
         </a>
         <div className="flex items-center gap-1.5">
+          <NavLink to="/search" aria-label="Search" className="h-8 w-8 grid place-items-center rounded text-muted hover:text-fg hover:bg-card transition-colors">
+            <Search size={18} strokeWidth={1.8} />
+          </NavLink>
           <NavLink to="/notifications" aria-label="Notifications" className="relative h-8 w-8 grid place-items-center rounded text-muted hover:text-fg hover:bg-card transition-colors">
             <Bell size={18} strokeWidth={1.8} />
             {unreadCount > 0 ? (
