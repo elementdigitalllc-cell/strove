@@ -387,19 +387,48 @@ export async function bumpViewsBatch(postIds) {
 export async function listComments(postId) {
   const { data, error } = await supabase
     .from('comments')
-    .select('*, profiles:profiles!comments_user_id_fkey (id, username, full_name)')
+    .select('id, post_id, user_id, content, created_at, likes, parent_comment_id, profiles:profiles!comments_user_id_fkey (id, username, full_name)')
     .eq('post_id', postId)
     .order('created_at', { ascending: true });
   return { data: data || [], error };
 }
 
-export async function createComment({ post_id, user_id, content }) {
+export async function createComment({ post_id, user_id, content, parent_comment_id = null }) {
   const { data, error } = await supabase
     .from('comments')
-    .insert({ post_id, user_id, content })
-    .select('*, profiles:profiles!comments_user_id_fkey (id, username, full_name)')
+    .insert({ post_id, user_id, content, parent_comment_id })
+    .select('id, post_id, user_id, content, created_at, likes, parent_comment_id, profiles:profiles!comments_user_id_fkey (id, username, full_name)')
     .single();
   return { data, error };
+}
+
+export async function likeComment(userId, commentId) {
+  const { error } = await supabase
+    .from('comment_likes')
+    .insert({ user_id: userId, comment_id: commentId });
+  if (error) console.error('[sdb.likeComment] error:', error);
+  return { error };
+}
+
+export async function unlikeComment(userId, commentId) {
+  const { error } = await supabase
+    .from('comment_likes')
+    .delete()
+    .eq('user_id', userId)
+    .eq('comment_id', commentId);
+  if (error) console.error('[sdb.unlikeComment] error:', error);
+  return { error };
+}
+
+export async function getLikedCommentIdsByPost(userId, postId) {
+  if (!userId || !postId) return { data: [], error: null };
+  const { data, error } = await supabase
+    .from('comment_likes')
+    .select('comment_id, comments!inner(post_id)')
+    .eq('user_id', userId)
+    .eq('comments.post_id', postId);
+  if (error) console.error('[sdb.getLikedCommentIdsByPost] error:', error);
+  return { data: (data || []).map((r) => r.comment_id), error };
 }
 
 export async function getCommentCountsByPost(postIds) {
