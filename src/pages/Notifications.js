@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Heart, MessageCircle, Repeat2, UserPlus } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
-import { getMyNotifications, markAllNotificationsRead } from '../lib/sdb';
+import { getMyNotifications, markNotificationRead } from '../lib/sdb';
 import { timeAgo } from '../lib/time';
 import { Avatar } from '../components/ui/Avatar';
 import { LoadingBlock } from '../components/ui/States';
@@ -46,10 +46,27 @@ export default function Notifications() {
       if (cancelled) return;
       setItems(data);
       setLoading(false);
-      await markAllNotificationsRead(user.id);
     })();
     return () => { cancelled = true; };
   }, [user?.id]);
+
+  async function handleNotificationClick(n) {
+    console.log('[Notifications.handleNotificationClick]', { id: n.id, type: n.type });
+
+    // Optimistically mark this row read in the UI.
+    setItems((all) => all.map((x) => (x.id === n.id ? { ...x, is_read: true } : x)));
+    if (!n.is_read) markNotificationRead(n.id);
+
+    if (n.type === 'follow') {
+      navigate('/profile/' + (n.actor?.id || ''));
+      return;
+    }
+    if (n.post_id) {
+      const qs = n.comment_id ? '?comment=' + n.comment_id : '';
+      navigate('/post/' + n.post_id + qs);
+    }
+  }
+
 
   if (loading) return <LoadingBlock label="Loading notifications…" />;
 
@@ -137,21 +154,20 @@ export default function Notifications() {
           );
         }
 
-        function go() {
-          if (n.type === 'follow') {
-            navigate('/profile/' + (actor.id || ''));
-          } else if (n.post_id) {
-            const qs = n.comment_id ? '?comment=' + n.comment_id : '';
-            navigate('/post/' + n.post_id + qs);
-          }
-        }
-
         return (
           <li
             key={n.id}
-            onClick={go}
+            role="button"
+            tabIndex={0}
+            onClick={() => handleNotificationClick(n)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleNotificationClick(n);
+              }
+            }}
             className={
-              'flex items-start gap-3 px-4 py-3 border-b border-border cursor-pointer hover:bg-card/60 transition-colors ' +
+              'flex items-start gap-3 px-4 py-3 border-b border-border cursor-pointer select-none hover:bg-card/60 transition-colors ' +
               (n.is_read ? '' : 'bg-orange/5')
             }
           >

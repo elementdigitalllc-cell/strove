@@ -333,6 +333,16 @@ export async function getUnreadNotificationCount(userId) {
   return { count: count || 0, error };
 }
 
+export async function markNotificationRead(notificationId) {
+  if (!notificationId) return { error: null };
+  const { error } = await supabase
+    .from('notifications')
+    .update({ is_read: true })
+    .eq('id', notificationId);
+  if (error) console.error('[sdb.markNotificationRead] error:', error);
+  return { error };
+}
+
 export async function markAllNotificationsRead(userId) {
   const { error } = await supabase
     .from('notifications')
