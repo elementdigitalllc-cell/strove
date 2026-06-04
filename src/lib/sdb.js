@@ -158,8 +158,8 @@ export async function createPost({ user_id, content }) {
 
 /* ============ Notifications ============ */
 
-export async function createNotification({ user_id, actor_id, type, post_id = null }) {
-  console.log('[sdb.createNotification] called with args =', { user_id, actor_id, type, post_id });
+export async function createNotification({ user_id, actor_id, type, post_id = null, comment_id = null }) {
+  console.log('[sdb.createNotification] called with args =', { user_id, actor_id, type, post_id, comment_id });
 
   if (!user_id || !actor_id) {
     console.warn('[sdb.createNotification] skip: missing user_id or actor_id');
@@ -182,13 +182,13 @@ export async function createNotification({ user_id, actor_id, type, post_id = nu
     );
   }
 
-  const payload = { user_id, actor_id, type, post_id };
+  const payload = { user_id, actor_id, type, post_id, comment_id };
   console.log('[sdb.createNotification] inserting payload =', JSON.stringify(payload, null, 2));
 
   const response = await supabase
     .from('notifications')
     .insert(payload)
-    .select('id, user_id, actor_id, type, post_id, created_at, is_read')
+    .select('id, user_id, actor_id, type, post_id, comment_id, created_at, is_read')
     .single();
 
   console.log(
@@ -240,23 +240,38 @@ export async function getMyNotifications(userId, limit = 20) {
     if (!postsErr) postMap = new Map((posts || []).map((p) => [p.id, p.content]));
   }
 
-  // 3) Per type, fetch the relevant comment content.
-  // - 'comment'      → actor's most recent comment on the post (their comment text)
-  // - 'reply'        → actor's most recent comment on the post (the reply text)
-  // - 'comment_like' → recipient's most recent comment on the post (the comment that was liked)
+  // 3) Resolve comment content. Prefer notification.comment_id when set
+  // (exact comment), fall back to legacy heuristic for older rows.
   const commentMap = new Map();
   const replyMap = new Map();
   const likedCommentMap = new Map();
 
-  const actorCommentNotifs = rows.filter(
-    (n) => (n.type === 'comment' || n.type === 'reply') && n.post_id && n.actor_id
+  const directCommentIds = [
+    ...new Set(
+      rows
+        .filter((n) => n.comment_id && ['comment', 'reply', 'comment_like'].includes(n.type))
+        .map((n) => n.comment_id)
+    ),
+  ];
+  const directCommentMap = new Map();
+  if (directCommentIds.length) {
+    const { data: directs } = await supabase
+      .from('comments')
+      .select('id, content')
+      .in('id', directCommentIds);
+    for (const c of directs || []) directCommentMap.set(c.id, c.content);
+  }
+
+  // Legacy fallback rows (no comment_id on the notification).
+  const legacyActorNotifs = rows.filter(
+    (n) => !n.comment_id && (n.type === 'comment' || n.type === 'reply') && n.post_id && n.actor_id
   );
-  const commentLikeNotifs = rows.filter(
-    (n) => n.type === 'comment_like' && n.post_id && n.user_id
+  const legacyLikeNotifs = rows.filter(
+    (n) => !n.comment_id && n.type === 'comment_like' && n.post_id && n.user_id
   );
 
   await Promise.all([
-    ...actorCommentNotifs.map(async (n) => {
+    ...legacyActorNotifs.map(async (n) => {
       const { data: c } = await supabase
         .from('comments')
         .select('content')
@@ -268,7 +283,7 @@ export async function getMyNotifications(userId, limit = 20) {
       if (n.type === 'reply') replyMap.set(n.id, c?.content || null);
       else commentMap.set(n.id, c?.content || null);
     }),
-    ...commentLikeNotifs.map(async (n) => {
+    ...legacyLikeNotifs.map(async (n) => {
       const { data: c } = await supabase
         .from('comments')
         .select('content')
@@ -282,15 +297,30 @@ export async function getMyNotifications(userId, limit = 20) {
   ]);
 
   return {
-    data: rows.map((n) => ({
-      ...n,
-      post_content: n.post_id ? postMap.get(n.post_id) || null : null,
-      comment_content: commentMap.get(n.id) || null,
-      reply_content: replyMap.get(n.id) || null,
-      liked_comment_content: likedCommentMap.get(n.id) || null,
-    })),
+    data: rows.map((n) => {
+      const direct = n.comment_id ? directCommentMap.get(n.comment_id) || null : null;
+      return {
+        ...n,
+        post_content: n.post_id ? postMap.get(n.post_id) || null : null,
+        comment_content:
+          n.type === 'comment' ? (direct || commentMap.get(n.id) || null) : null,
+        reply_content:
+          n.type === 'reply' ? (direct || replyMap.get(n.id) || null) : null,
+        liked_comment_content:
+          n.type === 'comment_like' ? (direct || likedCommentMap.get(n.id) || null) : null,
+      };
+    }),
     error: null,
   };
+}
+
+export async function getPostById(postId) {
+  const { data, error } = await supabase
+    .from('posts')
+    .select('*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count)')
+    .eq('id', postId)
+    .maybeSingle();
+  return { data, error };
 }
 
 export async function getUnreadNotificationCount(userId) {

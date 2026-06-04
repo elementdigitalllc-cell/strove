@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageCircle, Repeat2, Heart, Eye, Share, Bookmark, Trash2 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
@@ -33,13 +33,13 @@ function formatCount(n) {
 }
 
 
-export default function PostCard({ post: initial, isFollowing, onToggleFollow }) {
+export default function PostCard({ post: initial, isFollowing, onToggleFollow, forceOpenComments = false, highlightCommentId = null }) {
   const { user } = useAuth();
   const [post, setPost] = useState(initial);
   const [liked, setLiked] = useState(!!initial.currentUserLiked);
   const [reposted, setReposted] = useState(!!initial.currentUserReposted);
   const [saved, setSaved] = useState(false);
-  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(!!forceOpenComments);
   const [comments, setComments] = useState([]);
   const [commentDraft, setCommentDraft] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
@@ -136,17 +136,27 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow })
     }
   }
 
+  const loadCommentsData = useCallback(async () => {
+    const [{ data: list }, { data: likedIds }] = await Promise.all([
+      listComments(post.id),
+      user ? getLikedCommentIdsByPost(user.id, post.id) : Promise.resolve({ data: [] }),
+    ]);
+    setComments(list);
+    setLikedCommentIds(new Set(likedIds || []));
+  }, [post.id, user]);
+
+  useEffect(() => {
+    if (forceOpenComments) {
+      setCommentsOpen(true);
+      loadCommentsData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forceOpenComments, post.id]);
+
   async function openComments() {
     const next = !commentsOpen;
     setCommentsOpen(next);
-    if (next) {
-      const [{ data: list }, { data: likedIds }] = await Promise.all([
-        listComments(post.id),
-        user ? getLikedCommentIdsByPost(user.id, post.id) : Promise.resolve({ data: [] }),
-      ]);
-      setComments(list);
-      setLikedCommentIds(new Set(likedIds || []));
-    }
+    if (next) await loadCommentsData();
   }
 
   async function submitComment(e) {
@@ -174,6 +184,7 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow })
         actor_id: user.id,
         type: 'comment',
         post_id: post.id,
+        comment_id: data?.id || null,
       });
     }
   }
@@ -200,12 +211,13 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow })
     setReplyTo(null);
     setComments((c) => [...c, data]);
     setPost((p) => ({ ...p, comments: (p.comments || 0) + 1 }));
-    if (replyTarget.user_id) {
+    if (replyTarget.user_id && replyTarget.user_id !== user.id) {
       createNotification({
         user_id: replyTarget.user_id,
         actor_id: user.id,
         type: 'reply',
         post_id: post.id,
+        comment_id: data?.id || null,
       });
     }
   }
@@ -246,6 +258,7 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow })
           actor_id: user.id,
           type: 'comment_like',
           post_id: post.id,
+          comment_id: c.id,
         });
       }
     }
@@ -362,6 +375,7 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow })
             comments={comments}
             currentUserId={user?.id}
             likedCommentIds={likedCommentIds}
+            highlightCommentId={highlightCommentId}
             onToggleLike={toggleCommentLike}
             onStartReply={startReply}
             onDelete={removeComment}
@@ -388,6 +402,7 @@ function CommentsBlock({
   comments,
   currentUserId,
   likedCommentIds,
+  highlightCommentId,
   onToggleLike,
   onStartReply,
   onDelete,
@@ -421,6 +436,7 @@ function CommentsBlock({
                 comment={root}
                 currentUserId={currentUserId}
                 liked={likedCommentIds.has(root.id)}
+                highlighted={highlightCommentId === root.id}
                 onToggleLike={onToggleLike}
                 onStartReply={onStartReply}
                 onDelete={onDelete}
@@ -460,6 +476,7 @@ function CommentsBlock({
                         comment={child}
                         currentUserId={currentUserId}
                         liked={likedCommentIds.has(child.id)}
+                        highlighted={highlightCommentId === child.id}
                         onToggleLike={onToggleLike}
                         onStartReply={onStartReply}
                         onDelete={onDelete}
@@ -495,10 +512,22 @@ function CommentsBlock({
   );
 }
 
-function CommentRow({ comment: c, currentUserId, liked, onToggleLike, onStartReply, onDelete }) {
+function CommentRow({ comment: c, currentUserId, liked, highlighted, onToggleLike, onStartReply, onDelete }) {
   const isOwn = c.user_id === currentUserId;
+  const ref = useRef(null);
+  useEffect(() => {
+    if (highlighted && ref.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [highlighted]);
   return (
-    <div className="flex gap-2.5 text-[14px]">
+    <div
+      ref={ref}
+      className={
+        'flex gap-2.5 text-[14px] rounded transition-colors ' +
+        (highlighted ? 'bg-orange/10 ring-1 ring-orange/40 px-2 py-1.5 -mx-2' : '')
+      }
+    >
       <Avatar name={c.profiles?.full_name || c.profiles?.username || '?'} size="sm" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 text-[12.5px]">

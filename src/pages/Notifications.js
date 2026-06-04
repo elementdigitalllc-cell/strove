@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Heart, MessageCircle, Repeat2, UserPlus } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { getMyNotifications, markAllNotificationsRead } from '../lib/sdb';
@@ -33,6 +33,7 @@ const ICON_COLOR = {
 
 export default function Notifications() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -136,16 +137,26 @@ export default function Notifications() {
           );
         }
 
+        function go() {
+          if (n.type === 'follow') {
+            navigate('/profile/' + (actor.id || ''));
+          } else if (n.post_id) {
+            const qs = n.comment_id ? '?comment=' + n.comment_id : '';
+            navigate('/post/' + n.post_id + qs);
+          }
+        }
+
         return (
           <li
             key={n.id}
+            onClick={go}
             className={
-              'flex items-start gap-3 px-4 py-3 border-b border-border ' +
+              'flex items-start gap-3 px-4 py-3 border-b border-border cursor-pointer hover:bg-card/60 transition-colors ' +
               (n.is_read ? '' : 'bg-orange/5')
             }
           >
             <Icon size={18} className={iconColor + ' shrink-0 mt-0.5'} strokeWidth={2} />
-            <Link to={profileHref} className="shrink-0">
+            <Link to={profileHref} onClick={(e) => e.stopPropagation()} className="shrink-0">
               <Avatar name={actor.full_name || actor.username || '?'} size="sm" />
             </Link>
             <div className="flex-1 min-w-0">
