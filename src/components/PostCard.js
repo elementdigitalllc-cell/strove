@@ -515,17 +515,32 @@ function CommentsBlock({
 function CommentRow({ comment: c, currentUserId, liked, highlighted, onToggleLike, onStartReply, onDelete }) {
   const isOwn = c.user_id === currentUserId;
   const ref = useRef(null);
+  const [flash, setFlash] = useState(false);
+
   useEffect(() => {
-    if (highlighted && ref.current) {
-      ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (!highlighted) return;
+    const el = ref.current || document.getElementById('comment-' + c.id);
+    if (el) {
+      // Wait a tick so the scroll target is laid out (parent just opened).
+      const timer = setTimeout(() => {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setFlash(true);
+      }, 50);
+      const clear = setTimeout(() => setFlash(false), 1700);
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(clear);
+      };
     }
-  }, [highlighted]);
+  }, [highlighted, c.id]);
+
   return (
     <div
       ref={ref}
+      id={'comment-' + c.id}
       className={
-        'flex gap-2.5 text-[14px] rounded transition-colors ' +
-        (highlighted ? 'bg-orange/10 ring-1 ring-orange/40 px-2 py-1.5 -mx-2' : '')
+        'flex gap-2.5 text-[14px] ' +
+        (flash ? 'comment-highlight ' : '')
       }
     >
       <Avatar name={c.profiles?.full_name || c.profiles?.username || '?'} size="sm" />
