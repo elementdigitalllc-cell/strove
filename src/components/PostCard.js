@@ -435,6 +435,34 @@ function CommentsBlock({
     return acc;
   }, {});
 
+  const replyForm = (
+    <form onSubmit={onSubmitReply} className="flex gap-2 mt-2 pl-9">
+      <input
+        type="text"
+        autoFocus
+        value={replyDraft}
+        onChange={(e) => setReplyDraft(e.target.value)}
+        placeholder={'Reply to @' + (replyTo?.username || '')}
+        maxLength={280}
+        className="flex-1 h-9 px-3 rounded bg-card border border-border text-fg text-[13.5px] placeholder:text-muted/70 outline-none focus:border-orange transition-colors"
+      />
+      <button
+        type="button"
+        onClick={onCancelReply}
+        className="h-9 px-3 rounded text-muted hover:text-fg text-[12.5px]"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        disabled={!replyDraft.trim() || replySubmitting}
+        className="h-9 px-3.5 rounded bg-orange text-black text-[12.5px] font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 transition"
+      >
+        {replySubmitting ? '…' : 'Reply'}
+      </button>
+    </form>
+  );
+
   return (
     <div className="mt-3 pt-3 border-t border-border flex flex-col gap-3">
       {roots.length > 0 ? (
@@ -450,37 +478,11 @@ function CommentsBlock({
                 onStartReply={onStartReply}
                 onDelete={onDelete}
               />
-              {replyTo && (replyTo.parent_id === root.id || replyTo.id === root.id) ? (
-                <form onSubmit={onSubmitReply} className="flex gap-2 pl-9">
-                  <input
-                    type="text"
-                    autoFocus
-                    value={replyDraft}
-                    onChange={(e) => setReplyDraft(e.target.value)}
-                    placeholder={'Reply to @' + (replyTo.username || '')}
-                    maxLength={280}
-                    className="flex-1 h-9 px-3 rounded bg-card border border-border text-fg text-[13.5px] placeholder:text-muted/70 outline-none focus:border-orange transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={onCancelReply}
-                    className="h-9 px-3 rounded text-muted hover:text-fg text-[12.5px]"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={!replyDraft.trim() || replySubmitting}
-                    className="h-9 px-3.5 rounded bg-orange text-black text-[12.5px] font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 transition"
-                  >
-                    {replySubmitting ? '…' : 'Reply'}
-                  </button>
-                </form>
-              ) : null}
+              {replyTo?.id === root.id ? replyForm : null}
               {(childrenByParent[root.id] || []).length > 0 ? (
                 <ul className="pl-9 flex flex-col gap-2 border-l border-border ml-3">
                   {(childrenByParent[root.id] || []).map((child) => (
-                    <li key={child.id}>
+                    <li key={child.id} className="flex flex-col gap-2">
                       <CommentRow
                         comment={child}
                         currentUserId={currentUserId}
@@ -490,6 +492,7 @@ function CommentsBlock({
                         onStartReply={onStartReply}
                         onDelete={onDelete}
                       />
+                      {replyTo?.id === child.id ? replyForm : null}
                     </li>
                   ))}
                 </ul>
