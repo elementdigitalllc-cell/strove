@@ -128,9 +128,15 @@ export default function MessageThread() {
     return () => supabase.removeChannel(channel);
   }, [conversationId, user?.id]);
 
+  const didInitialScrollRef = useRef(false);
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [messages.length]);
+    if (loading || messages.length === 0) return;
+    bottomRef.current?.scrollIntoView({
+      behavior: didInitialScrollRef.current ? 'smooth' : 'instant',
+      block: 'end',
+    });
+    didInitialScrollRef.current = true;
+  }, [messages.length, loading]);
 
   async function submit(e) {
     e.preventDefault();
