@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, Send } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
@@ -22,7 +22,7 @@ export default function MessageThread() {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
-  const scrollContainerRef = useRef(null);
+  const bottomRef = useRef(null);
 
   useEffect(() => {
     if (!user?.id || !conversationId) return;
@@ -128,14 +128,10 @@ export default function MessageThread() {
     return () => supabase.removeChannel(channel);
   }, [conversationId, user?.id]);
 
-  useEffect(() => {
-    if (!scrollContainerRef.current || messages.length === 0) return;
-    const el = scrollContainerRef.current;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        el.scrollTop = el.scrollHeight;
-      });
-    });
+  useLayoutEffect(() => {
+    if (bottomRef.current && messages.length > 0) {
+      bottomRef.current.scrollIntoView({ behavior: 'instant', block: 'end' });
+    }
   }, [messages]);
 
   async function submit(e) {
@@ -201,10 +197,7 @@ export default function MessageThread() {
         </Link>
       </div>
 
-      <div
-        ref={scrollContainerRef}
-        className="flex-1 px-4 py-4 flex flex-col gap-2 overflow-y-auto"
-      >
+      <div className="flex-1 px-4 py-4 flex flex-col gap-2 overflow-y-auto">
         {loading ? (
           <LoadingBlock label="Loading messages…" />
         ) : messages.length === 0 ? (
@@ -240,6 +233,7 @@ export default function MessageThread() {
             );
           })
         )}
+        <div ref={bottomRef} style={{ height: 1 }} />
       </div>
 
       <form
