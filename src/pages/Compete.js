@@ -15,6 +15,7 @@ import { Textarea } from '../components/ui/Input';
 import { Tabs, TabsList, TabsPill, TabsContent } from '../components/ui/Tabs';
 import { Avatar } from '../components/ui/Avatar';
 import { StreakPill } from '../components/ui/Pill';
+import { BadgeStrip } from '../components/Badges';
 import { LoadingBlock, ErrorBlock, Toast } from '../components/ui/States';
 import { cn } from '../lib/cn';
 
@@ -265,6 +266,7 @@ function PotTab({ user, entries, myEntry, myVote, reload }) {
                       <span className="font-bold text-sm">{p.full_name || p.username}</span>
                       <span className="text-muted text-xs font-medium">@{p.username}</span>
                       <StreakPill count={p.streak_count || 0} />
+                      <BadgeStrip badges={p.badges} />
                     </div>
                     <p className="text-[13px] text-muted leading-relaxed font-normal whitespace-pre-wrap">
                       {e.why_i_should_win || 'No statement yet.'}
@@ -342,6 +344,7 @@ function VoteTab({ user, entries, myVote, reload }) {
                     <span className="text-xs text-muted">@{p.username}</span>
                   </div>
                   <StreakPill count={p.streak_count || 0} size="lg" />
+                  <BadgeStrip badges={p.badges} />
                 </header>
                 <p className="text-sm whitespace-pre-wrap leading-relaxed">{e.why_i_should_win || 'No statement yet.'}</p>
                 <div className="mt-3">

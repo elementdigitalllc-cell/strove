@@ -182,7 +182,7 @@ export async function searchProfiles(query, limit = 20) {
   const pattern = '%' + q.replace(/[%_]/g, (m) => '\\' + m) + '%';
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, full_name, streak_count')
+    .select('id, username, full_name, streak_count, badges')
     .or('username.ilike.' + pattern + ',full_name.ilike.' + pattern)
     .limit(limit);
   return { data: data || [], error };
@@ -222,7 +222,7 @@ export async function getFeedPosts(limit = 50) {
   const [postsRes, repostsRes] = await Promise.all([
     supabase
       .from('posts')
-      .select('*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count)')
+      .select('*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count, badges)')
       .order('created_at', { ascending: false })
       .limit(limit),
     supabase
@@ -249,13 +249,13 @@ export async function getFeedPosts(limit = 50) {
     missingPostIds.length
       ? supabase
           .from('posts')
-          .select('*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count)')
+          .select('*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count, badges)')
           .in('id', missingPostIds)
       : Promise.resolve({ data: [] }),
     reposterIds.length
       ? supabase
           .from('profiles')
-          .select('id, username, full_name, streak_count')
+          .select('id, username, full_name, streak_count, badges')
           .in('id', reposterIds)
       : Promise.resolve({ data: [] }),
   ]);
@@ -309,7 +309,7 @@ export async function getFeedPosts(limit = 50) {
 export async function getPostsByUser(userId) {
   const { data, error } = await supabase
     .from('posts')
-    .select('*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count)')
+    .select('*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count, badges)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
   return { data: data || [], error };
@@ -319,7 +319,7 @@ export async function createPost({ user_id, content }) {
   const { data, error } = await supabase
     .from('posts')
     .insert({ user_id, content })
-    .select('*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count)')
+    .select('*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count, badges)')
     .single();
   return { data, error };
 }
@@ -485,7 +485,7 @@ export async function getMyNotifications(userId, limit = 20) {
 export async function getPostById(postId) {
   const { data, error } = await supabase
     .from('posts')
-    .select('*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count)')
+    .select('*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count, badges)')
     .eq('id', postId)
     .maybeSingle();
   return { data, error };
@@ -714,7 +714,7 @@ export async function getSavedPostIds(userId) {
 export async function getSavedPosts(userId) {
   const { data, error } = await supabase
     .from('saved_posts')
-    .select('post_id, created_at, posts:posts!saved_posts_post_id_fkey (*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count))')
+    .select('post_id, created_at, posts:posts!saved_posts_post_id_fkey (*, profiles:profiles!posts_user_id_fkey (id, username, full_name, streak_count, badges))')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
   return { data: (data || []).map((r) => r.posts).filter(Boolean), error };
@@ -763,7 +763,7 @@ export async function getFollowerProfiles(targetId) {
   if (list.length === 0) return { data: [], error: null };
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, full_name, streak_count')
+    .select('id, username, full_name, streak_count, badges')
     .in('id', list);
   return { data: data || [], error };
 }
@@ -778,7 +778,7 @@ export async function getFollowingProfiles(userId) {
   if (list.length === 0) return { data: [], error: null };
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, full_name, streak_count')
+    .select('id, username, full_name, streak_count, badges')
     .in('id', list);
   return { data: data || [], error };
 }
@@ -860,7 +860,7 @@ export async function getCurrentPotEntries() {
   const { month, year } = currentMonthYear();
   const { data, error } = await supabase
     .from('pot_entries')
-    .select('*, profiles:profiles!pot_entries_user_id_fkey (id, username, full_name, streak_count)')
+    .select('*, profiles:profiles!pot_entries_user_id_fkey (id, username, full_name, streak_count, badges)')
     .eq('month', month)
     .eq('year', year)
     .order('created_at', { ascending: false });

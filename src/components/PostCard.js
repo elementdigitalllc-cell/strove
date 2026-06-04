@@ -21,6 +21,7 @@ import {
 } from '../lib/sdb';
 import { Avatar } from './ui/Avatar';
 import { StreakPill } from './ui/Pill';
+import { BadgeStrip } from './Badges';
 import { cn } from '../lib/cn';
 import { timeAgo } from '../lib/time';
 
@@ -344,6 +345,7 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow, f
         <header className="flex items-center gap-1.5 flex-wrap text-sm">
           <Link to={'/profile/' + post.user_id} className="font-bold text-fg hover:underline">{displayName}</Link>
           <StreakPill count={author.streak_count || 0} />
+          <BadgeStrip badges={author.badges} />
           <Link to={'/profile/' + post.user_id} className="text-muted font-medium">@{author.username}</Link>
           <span className="text-muted">·</span>
           <span className="text-muted">{timeAgo(post.created_at)}</span>

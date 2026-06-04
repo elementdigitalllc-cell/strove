@@ -16,15 +16,15 @@ export function Pill({ className, children, ...props }) {
 
 export function StreakPill({ count, size = 'sm', className }) {
   return (
-    <Pill
+    <span
       className={cn(
-        'bg-orange text-black',
-        size === 'lg' && 'text-[13px] px-2.5 py-1',
+        'inline-flex items-center gap-0.5 px-1 py-px rounded leading-none bg-orange text-black font-semibold',
+        size === 'lg' ? 'text-[6.5px] px-1.5 py-0.5' : 'text-[5.5px]',
         className
       )}
     >
       <span>🔥</span>
       <span className="font-bold">{count || 0}</span>
-    </Pill>
+    </span>
   );
 }

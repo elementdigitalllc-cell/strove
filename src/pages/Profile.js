@@ -20,6 +20,7 @@ import PostCard from '../components/PostCard';
 import { Button } from '../components/ui/Button';
 import { Input, Textarea } from '../components/ui/Input';
 import { Avatar } from '../components/ui/Avatar';
+import { BadgeStrip } from '../components/Badges';
 import { LoadingBlock, ErrorBlock, Toast } from '../components/ui/States';
 
 function fmtJoined(ts) {
@@ -151,7 +152,10 @@ export default function Profile() {
         </div>
 
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">{target.full_name || target.username}</h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-extrabold tracking-tight">{target.full_name || target.username}</h1>
+            <BadgeStrip badges={target.badges} />
+          </div>
           <div className="text-sm text-muted font-medium">@{target.username}</div>
         </div>
 
@@ -261,8 +265,11 @@ function FollowListModal({ mode, targetId, currentUserId, myFollowing, onToggleF
                 >
                   <Avatar name={p.full_name || p.username || '?'} size="md" />
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold text-fg text-[14.5px] truncate">
-                      {p.full_name || p.username}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-bold text-fg text-[14.5px] truncate">
+                        {p.full_name || p.username}
+                      </span>
+                      <BadgeStrip badges={p.badges} />
                     </div>
                     <div className="text-[13px] text-muted font-medium truncate">
                       @{p.username}

@@ -17,6 +17,7 @@ import {
 } from '../lib/recentSearches';
 import { Avatar } from '../components/ui/Avatar';
 import { StreakPill } from '../components/ui/Pill';
+import { BadgeStrip } from '../components/Badges';
 import { cn } from '../lib/cn';
 
 export default function Search() {
@@ -133,6 +134,7 @@ export default function Search() {
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="font-bold text-fg text-[14.5px]">{p.full_name || p.username}</span>
                   <StreakPill count={p.streak_count || 0} />
+                  <BadgeStrip badges={p.badges} />
                 </div>
                 <div className="text-[13px] text-muted font-medium">@{p.username}</div>
               </div>
