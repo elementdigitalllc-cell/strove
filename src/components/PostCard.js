@@ -199,7 +199,7 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow, f
       post_id: post.id,
       user_id: user.id,
       content,
-      parent_comment_id: replyTo.id,
+      parent_comment_id: replyTo.parent_id || replyTo.id,
     });
     setReplySubmitting(false);
     if (error) {
@@ -223,7 +223,16 @@ export default function PostCard({ post: initial, isFollowing, onToggleFollow, f
   }
 
   function startReply(c) {
-    setReplyTo({ id: c.id, username: c.profiles?.username || '', user_id: c.user_id });
+    // Flatten thread: every reply lives one level below the root comment, so
+    // we use the root's id as the parent. If the clicked comment is already a
+    // reply, the root is c.parent_comment_id; otherwise it's c.id.
+    const parent_id = c.parent_comment_id || c.id;
+    setReplyTo({
+      id: c.id,
+      parent_id,
+      username: c.profiles?.username || '',
+      user_id: c.user_id,
+    });
     setReplyDraft('@' + (c.profiles?.username || '') + ' ');
   }
 
@@ -441,7 +450,7 @@ function CommentsBlock({
                 onStartReply={onStartReply}
                 onDelete={onDelete}
               />
-              {replyTo?.id === root.id ? (
+              {replyTo && (replyTo.parent_id === root.id || replyTo.id === root.id) ? (
                 <form onSubmit={onSubmitReply} className="flex gap-2 pl-9">
                   <input
                     type="text"
@@ -515,33 +524,31 @@ function CommentsBlock({
 function CommentRow({ comment: c, currentUserId, liked, highlighted, onToggleLike, onStartReply, onDelete }) {
   const isOwn = c.user_id === currentUserId;
   const ref = useRef(null);
-  const [flash, setFlash] = useState(false);
 
   useEffect(() => {
     if (!highlighted) return;
     const el = ref.current || document.getElementById('comment-' + c.id);
-    if (el) {
-      // Wait a tick so the scroll target is laid out (parent just opened).
-      const timer = setTimeout(() => {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setFlash(true);
-      }, 50);
-      const clear = setTimeout(() => setFlash(false), 1700);
-      return () => {
-        clearTimeout(timer);
-        clearTimeout(clear);
-      };
+    if (!el) return;
+    const scrollTimer = setTimeout(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('comment-highlight');
+    }, 50);
+    function onEnd() {
+      el.classList.remove('comment-highlight');
     }
+    el.addEventListener('animationend', onEnd);
+    return () => {
+      clearTimeout(scrollTimer);
+      el.removeEventListener('animationend', onEnd);
+      el.classList.remove('comment-highlight');
+    };
   }, [highlighted, c.id]);
 
   return (
     <div
       ref={ref}
       id={'comment-' + c.id}
-      className={
-        'flex gap-2.5 text-[14px] ' +
-        (flash ? 'comment-highlight ' : '')
-      }
+      className="flex gap-2.5 text-[14px]"
     >
       <Avatar name={c.profiles?.full_name || c.profiles?.username || '?'} size="sm" />
       <div className="flex-1 min-w-0">
