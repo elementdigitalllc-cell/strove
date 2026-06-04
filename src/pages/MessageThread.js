@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, Send } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
@@ -22,7 +22,6 @@ export default function MessageThread() {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
-  const bottomRef = useRef(null);
 
   useEffect(() => {
     if (!user?.id || !conversationId) return;
@@ -128,9 +127,10 @@ export default function MessageThread() {
     return () => supabase.removeChannel(channel);
   }, [conversationId, user?.id]);
 
-  useLayoutEffect(() => {
-    if (bottomRef.current && messages.length > 0) {
-      bottomRef.current.scrollIntoView({ behavior: 'instant', block: 'end' });
+  useEffect(() => {
+    const el = document.getElementById('messages-scroll');
+    if (el && messages.length > 0) {
+      el.scrollTop = el.scrollHeight;
     }
   }, [messages]);
 
@@ -197,7 +197,7 @@ export default function MessageThread() {
         </Link>
       </div>
 
-      <div className="flex-1 px-4 py-4 flex flex-col gap-2 overflow-y-auto">
+      <div id="messages-scroll" className="flex-1 px-4 py-4 flex flex-col gap-2 overflow-y-auto">
         {loading ? (
           <LoadingBlock label="Loading messages…" />
         ) : messages.length === 0 ? (
@@ -233,7 +233,6 @@ export default function MessageThread() {
             );
           })
         )}
-        <div ref={bottomRef} style={{ height: 1 }} />
       </div>
 
       <form
