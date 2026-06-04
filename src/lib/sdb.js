@@ -120,11 +120,22 @@ export async function getFeedPosts(limit = 50) {
     display_at: p.created_at,
   }));
 
-  const combined = [...postItems, ...repostItems]
-    .sort((a, b) => new Date(b.display_at) - new Date(a.display_at))
-    .slice(0, limit);
+  // One row per unique post.id. Most-recent entry wins, so if a repost is
+  // newer than the original, the surviving row carries repost_by (header
+  // renders) and original is dropped.
+  const combined = [...postItems, ...repostItems].sort(
+    (a, b) => new Date(b.display_at) - new Date(a.display_at)
+  );
 
-  return { data: combined, error: null };
+  const seen = new Set();
+  const deduped = [];
+  for (const item of combined) {
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    deduped.push(item);
+  }
+
+  return { data: deduped.slice(0, limit), error: null };
 }
 
 export async function getPostsByUser(userId) {
