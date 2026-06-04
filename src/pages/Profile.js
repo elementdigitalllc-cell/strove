@@ -8,6 +8,7 @@ import {
   getPostsByUser,
   getFollowers,
   getFollowing,
+  getOrCreateConversation,
   follow,
   unfollow,
   updateProfile,
@@ -112,9 +113,21 @@ export default function Profile() {
                 </Button>
               </>
             ) : (
-              <Button size="sm" variant={isFollowing ? 'outline' : 'primary'} onClick={toggleFollow}>
-                {isFollowing ? 'Following' : 'Follow'}
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    const { data } = await getOrCreateConversation(me.id, target.id);
+                    if (data) navigate('/messages/' + data.id);
+                  }}
+                >
+                  Message
+                </Button>
+                <Button size="sm" variant={isFollowing ? 'outline' : 'primary'} onClick={toggleFollow}>
+                  {isFollowing ? 'Following' : 'Follow'}
+                </Button>
+              </>
             )}
           </div>
         </div>

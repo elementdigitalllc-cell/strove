@@ -14,6 +14,7 @@ import Journal from './pages/Journal';
 import Support from './pages/Support';
 import Notifications from './pages/Notifications';
 import Messages from './pages/Messages';
+import MessageThread from './pages/MessageThread';
 import PostDetail from './pages/PostDetail';
 import Search from './pages/Search';
 import './App.css';
@@ -54,6 +55,7 @@ export default function App() {
             <Route path="/support" element={<Support />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/messages" element={<Messages />} />
+            <Route path="/messages/:conversationId" element={<MessageThread />} />
             <Route path="/post/:postId" element={<PostDetail />} />
             <Route path="/search" element={<Search />} />
           </Route>

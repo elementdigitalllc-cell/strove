@@ -20,6 +20,125 @@ export async function getProfileByUsername(username) {
   return { data, error };
 }
 
+/* ============ Direct messages ============ */
+
+export async function getOrCreateConversation(userA, userB) {
+  if (!userA || !userB || userA === userB) {
+    return { data: null, error: new Error('Invalid participants.') };
+  }
+  const [a, b] = [userA, userB].sort();
+  const { data: existing, error: lookupErr } = await supabase
+    .from('conversations')
+    .select('*')
+    .eq('participant_1', a)
+    .eq('participant_2', b)
+    .maybeSingle();
+  if (lookupErr) return { data: null, error: lookupErr };
+  if (existing) return { data: existing, error: null };
+  const { data, error } = await supabase
+    .from('conversations')
+    .insert({ participant_1: a, participant_2: b })
+    .select('*')
+    .single();
+  return { data, error };
+}
+
+export async function listMyConversations(userId) {
+  if (!userId) return { data: [], error: null };
+  const { data, error } = await supabase
+    .from('conversations')
+    .select('*')
+    .or(`participant_1.eq.${userId},participant_2.eq.${userId}`)
+    .order('last_message_at', { ascending: false });
+  if (error) return { data: [], error };
+  const rows = data || [];
+  if (rows.length === 0) return { data: [], error: null };
+
+  const otherIds = [
+    ...new Set(rows.map((c) => (c.participant_1 === userId ? c.participant_2 : c.participant_1))),
+  ];
+  const convIds = rows.map((c) => c.id);
+
+  const [profilesRes, messagesRes] = await Promise.all([
+    supabase.from('profiles').select('id, username, full_name').in('id', otherIds),
+    supabase
+      .from('messages')
+      .select('id, conversation_id, sender_id, content, created_at, is_read')
+      .in('conversation_id', convIds)
+      .order('created_at', { ascending: false }),
+  ]);
+
+  const profileMap = new Map((profilesRes.data || []).map((p) => [p.id, p]));
+  const lastMessageMap = new Map();
+  for (const m of messagesRes.data || []) {
+    if (!lastMessageMap.has(m.conversation_id)) lastMessageMap.set(m.conversation_id, m);
+  }
+
+  return {
+    data: rows.map((c) => {
+      const otherId = c.participant_1 === userId ? c.participant_2 : c.participant_1;
+      return {
+        ...c,
+        other: profileMap.get(otherId) || null,
+        lastMessage: lastMessageMap.get(c.id) || null,
+      };
+    }),
+    error: null,
+  };
+}
+
+export async function getConversationById(conversationId, userId) {
+  const { data, error } = await supabase
+    .from('conversations')
+    .select('*')
+    .eq('id', conversationId)
+    .maybeSingle();
+  if (error || !data) return { data: null, error };
+  const otherId = data.participant_1 === userId ? data.participant_2 : data.participant_1;
+  const { data: other } = await supabase
+    .from('profiles')
+    .select('id, username, full_name')
+    .eq('id', otherId)
+    .maybeSingle();
+  return { data: { ...data, other: other || null }, error: null };
+}
+
+export async function listMessages(conversationId) {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: true });
+  return { data: data || [], error };
+}
+
+export async function sendMessage({ conversation_id, sender_id, content }) {
+  const { data, error } = await supabase
+    .from('messages')
+    .insert({ conversation_id, sender_id, content })
+    .select('*')
+    .single();
+  return { data, error };
+}
+
+export async function deleteConversation(conversationId) {
+  const { error } = await supabase
+    .from('conversations')
+    .delete()
+    .eq('id', conversationId);
+  return { error };
+}
+
+export async function markConversationMessagesRead(conversationId, userId) {
+  const { error } = await supabase
+    .from('messages')
+    .update({ is_read: true })
+    .eq('conversation_id', conversationId)
+    .neq('sender_id', userId)
+    .eq('is_read', false);
+  return { error };
+}
+
 export async function searchProfiles(query, limit = 20) {
   const q = (query || '').trim();
   if (!q) return { data: [], error: null };
