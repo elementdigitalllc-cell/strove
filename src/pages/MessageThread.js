@@ -129,9 +129,13 @@ export default function MessageThread() {
   }, [conversationId, user?.id]);
 
   useEffect(() => {
-    if (scrollContainerRef.current && messages.length > 0) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
-    }
+    if (!scrollContainerRef.current || messages.length === 0) return;
+    const el = scrollContainerRef.current;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight;
+      });
+    });
   }, [messages]);
 
   async function submit(e) {
