@@ -22,6 +22,7 @@ export default function MessageThread() {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const bottomRef = useRef(null);
 
   useEffect(() => {
     if (!user?.id || !conversationId) return;
@@ -128,7 +129,10 @@ export default function MessageThread() {
   }, [conversationId, user?.id]);
 
   useEffect(() => {
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' });
+    if (messages.length === 0) return;
+    setTimeout(() => {
+      bottomRef.current?.scrollIntoView();
+    }, 100);
   }, [messages]);
 
   async function submit(e) {
@@ -253,6 +257,7 @@ export default function MessageThread() {
           <Send size={15} />
         </button>
       </form>
+      <div ref={bottomRef} />
     </div>
   );
 }
