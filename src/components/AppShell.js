@@ -125,7 +125,7 @@ export default function AppShell() {
       supabase.removeChannel(channel);
       window.removeEventListener('strove:refresh-dm-badge', onCustom);
     };
-  }, [user?.id, location.pathname]);
+  }, [user?.id]);
 
   return (
     <div className="relative mx-auto max-w-[520px] min-h-dvh bg-bg flex flex-col">
