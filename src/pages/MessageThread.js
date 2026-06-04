@@ -9,6 +9,7 @@ import {
   markConversationMessagesRead,
 } from '../lib/sdb';
 import { supabase } from '../supabaseClient';
+import { timeAgo } from '../lib/time';
 import { Avatar } from '../components/ui/Avatar';
 import { LoadingBlock } from '../components/ui/States';
 
@@ -108,6 +109,21 @@ export default function MessageThread() {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: 'conversation_id=eq.' + conversationId,
+        },
+        (payload) => {
+          console.log('[MessageThread] realtime UPDATE', payload.new?.id, 'is_read =', payload.new?.is_read);
+          setMessages((prev) =>
+            prev.map((m) => (m.id === payload.new.id ? { ...m, ...payload.new } : m))
+          );
+        }
+      )
       .subscribe((status) => console.log('[MessageThread] channel status =', status));
     return () => supabase.removeChannel(channel);
   }, [conversationId, user?.id]);
@@ -152,6 +168,11 @@ export default function MessageThread() {
   const other = conversation?.other || {};
   const otherName = other.full_name || other.username || 'Conversation';
 
+  // Last outgoing message id — for the iMessage-style receipt under it.
+  const lastMineId = [...messages]
+    .reverse()
+    .find((m) => m.sender_id === user?.id && !m._pending)?.id;
+
   return (
     <div className="-mx-4 flex flex-col min-h-[calc(100dvh-57px-96px)]">
       <div className="sticky top-[57px] z-10 bg-bg/95 backdrop-blur border-b border-border px-4 py-3 flex items-center gap-3">
@@ -185,21 +206,28 @@ export default function MessageThread() {
           ) : (
             messages.map((m) => {
               const mine = m.sender_id === user?.id;
+              const showReceipt = mine && m.id === lastMineId;
               return (
-                <div
-                  key={m.id}
-                  className={'flex ' + (mine ? 'justify-end' : 'justify-start')}
-                >
-                  <div
-                    className={
-                      'max-w-[78%] px-3.5 py-2 rounded-[18px] text-[14.5px] leading-snug whitespace-pre-wrap break-words ' +
-                      (mine
-                        ? 'bg-orange text-black rounded-br-md'
-                        : 'bg-card text-fg border border-border rounded-bl-md')
-                    }
-                  >
-                    {m.content}
+                <div key={m.id} className="flex flex-col">
+                  <div className={'flex ' + (mine ? 'justify-end' : 'justify-start')}>
+                    <div
+                      className={
+                        'max-w-[78%] px-3.5 py-2 rounded-[18px] text-[14.5px] leading-snug whitespace-pre-wrap break-words ' +
+                        (mine
+                          ? 'bg-orange text-black rounded-br-md'
+                          : 'bg-card text-fg border border-border rounded-bl-md')
+                      }
+                    >
+                      {m.content}
+                    </div>
                   </div>
+                  {showReceipt ? (
+                    <div className="self-end mt-1 mr-1 text-[11px] text-muted">
+                      {m.is_read
+                        ? 'Read' + (m.read_at ? ' ' + timeAgo(m.read_at) : '')
+                        : 'Delivered'}
+                    </div>
+                  ) : null}
                 </div>
               );
             })

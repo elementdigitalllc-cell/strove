@@ -165,7 +165,7 @@ export async function markConversationMessagesRead(conversationId, userId) {
     .eq('conversation_id', conversationId)
     .neq('sender_id', userId)
     .eq('is_read', false)
-    .select('id');
+    .select('id, is_read, read_at');
   if (error) console.error('[sdb.markConversationMessagesRead] error:', error);
   console.log(
     '[sdb.markConversationMessagesRead] updated',
