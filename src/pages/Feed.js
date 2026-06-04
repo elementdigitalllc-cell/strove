@@ -61,9 +61,16 @@ export default function Feed() {
     }
     setFollowingSet(new Set(followsResult.data || []));
     setLoading(false);
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    // Reset stale per-user UI state immediately on account switch so we don't
+    // flash the previous user's likes/reposts before the new fetch resolves.
+    setPosts([]);
+    setFollowingSet(new Set());
+    load();
+  }, [user?.id, load]);
 
   async function toggleFollow(targetId) {
     if (!user || targetId === user.id) return;
