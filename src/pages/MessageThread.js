@@ -38,24 +38,37 @@ export default function MessageThread() {
       }
       setConversation(convo);
       setMessages(msgs);
-      setLoading(false);
 
       // Inbound = messages from the other person that aren't read yet. These
-      // are exactly the ones the update touches, so we can hand the delta
-      // straight to AppShell as an optimistic decrement.
+      // are exactly the ones the update should touch.
       const expectedUnreadDelta = (msgs || []).filter(
         (m) => m.sender_id !== user.id && !m.is_read
       ).length;
       console.log(
         '[MessageThread] opening conversation =', conversationId,
-        'expected unread delta =', expectedUnreadDelta
+        'currentUserId =', user.id,
+        'expected unread delta =', expectedUnreadDelta,
+        'where:', {
+          conversation_id: conversationId,
+          'sender_id !=': user.id,
+          is_read: false,
+        }
       );
 
+      // Block on the DB write so we don't render the thread (and let the user
+      // navigate away) before is_read = true has actually persisted. AppShell's
+      // refresh('mount') on a later reload will then return the correct count.
       const { error, updatedCount } = await markConversationMessagesRead(conversationId, user.id);
-      console.log(
-        '[MessageThread] mark-as-read result',
-        { error, updatedCount, expectedUnreadDelta }
-      );
+      console.log('[MessageThread] mark-as-read result', { error, updatedCount, expectedUnreadDelta });
+      if (updatedCount === 0) {
+        console.warn(
+          '[MessageThread] WARNING: mark-as-read updated 0 rows. Either every message was already read, ' +
+          'or RLS blocked the UPDATE. Check the messages_update_own policy in Supabase.'
+        );
+      }
+      if (cancelled) return;
+
+      setLoading(false);
 
       window.dispatchEvent(
         new CustomEvent('strove:refresh-dm-badge', {
