@@ -7,16 +7,20 @@ import { Avatar } from '../components/ui/Avatar';
 import { LoadingBlock } from '../components/ui/States';
 
 function timeAgo(ts) {
-  const diff = Date.now() - new Date(ts).getTime();
-  const s = Math.floor(diff / 1000);
-  if (s < 60) return s + 's ago';
-  const m = Math.floor(s / 60);
-  if (m < 60) return m + 'm ago';
-  const h = Math.floor(m / 60);
-  if (h < 24) return h + 'h ago';
-  const d = Math.floor(h / 24);
-  if (d < 7) return d + 'd ago';
-  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  // Supabase "timestamp without time zone" values come back without a Z, so
+  // new Date() interprets them in the local timezone — producing a "future"
+  // timestamp and negative deltas. Force UTC parsing when no offset is present.
+  let parsed;
+  if (typeof ts === 'string' && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(ts)) {
+    parsed = new Date(ts + 'Z');
+  } else {
+    parsed = new Date(ts);
+  }
+  const seconds = Math.max(0, Math.floor((Date.now() - parsed.getTime()) / 1000));
+  if (seconds < 60) return seconds + 's ago';
+  if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+  if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+  return Math.floor(seconds / 86400) + 'd ago';
 }
 
 function excerpt(text, limit = 40) {
