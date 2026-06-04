@@ -43,6 +43,9 @@ export default function Feed() {
       ]);
       const likedSet = new Set(likedResult.data || []);
       const repostedSet = new Set(repostedResult.data || []);
+      console.log('[Feed.load] repostedResult.data =', repostedResult.data);
+      console.log('[Feed.load] currentUserId =', user?.id);
+      console.log('[Feed.load] feed post ids =', fetched.map((p) => ({ id: p.id, feed_id: p.feed_id, repost_by: p.repost_by?.id || null })));
       const merged = fetched.map((p) => ({
         ...p,
         reposts: repostCounts[p.id] || 0,
@@ -50,6 +53,10 @@ export default function Feed() {
         currentUserLiked: likedSet.has(p.id),
         currentUserReposted: repostedSet.has(p.id),
       }));
+      console.log(
+        '[Feed.load] merged currentUserReposted map =',
+        merged.map((p) => ({ feed_id: p.feed_id, post_id: p.id, currentUserReposted: p.currentUserReposted }))
+      );
       setPosts(merged);
     }
     setFollowingSet(new Set(followsResult.data || []));

@@ -291,11 +291,15 @@ export async function unrepost(userId, postId) {
 }
 
 export async function getRepostedOriginalIds(userId) {
+  console.log('[sdb.getRepostedOriginalIds] called with userId =', userId);
   const { data, error } = await supabase
     .from('reposts')
     .select('post_id')
     .eq('user_id', userId);
-  return { data: (data || []).map((r) => r.post_id), error };
+  console.log('[sdb.getRepostedOriginalIds] raw response =', JSON.stringify({ data, error }, null, 2));
+  const postIds = (data || []).map((r) => r.post_id);
+  console.log('[sdb.getRepostedOriginalIds] returning post_ids =', postIds);
+  return { data: postIds, error };
 }
 
 export async function getRepostCountsByPost(postIds) {
