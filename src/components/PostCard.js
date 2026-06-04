@@ -478,7 +478,7 @@ function CommentsBlock({
                 onStartReply={onStartReply}
                 onDelete={onDelete}
               />
-              {(childrenByParent[root.id] || []).length > 0 ? (
+              {(childrenByParent[root.id] || []).length > 0 || replyTo?.id === root.id ? (
                 <ul className="pl-9 flex flex-col gap-2 border-l border-border ml-3">
                   {(childrenByParent[root.id] || []).map((child) => (
                     <li key={child.id} className="flex flex-col gap-2">
@@ -494,9 +494,11 @@ function CommentsBlock({
                       {replyTo?.id === child.id ? replyForm : null}
                     </li>
                   ))}
+                  {replyTo?.id === root.id ? (
+                    <li key="root-reply-form">{replyForm}</li>
+                  ) : null}
                 </ul>
               ) : null}
-              {replyTo?.id === root.id ? replyForm : null}
             </li>
           ))}
         </ul>
