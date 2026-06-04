@@ -115,7 +115,14 @@ export default function AppShell() {
       )
       .subscribe((status) => console.log('[AppShell.dms] channel status =', status));
 
-    function onCustom() { refresh('custom-event'); }
+    function onCustom(ev) {
+      const delta = Number(ev?.detail?.delta) || 0;
+      console.log('[AppShell.dms] custom event delta =', delta);
+      if (delta > 0) {
+        setUnreadDmCount((prev) => Math.max(0, prev - delta));
+      }
+      refresh('custom-event');
+    }
     window.addEventListener('strove:refresh-dm-badge', onCustom);
 
     return () => {

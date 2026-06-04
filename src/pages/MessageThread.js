@@ -39,9 +39,32 @@ export default function MessageThread() {
       setConversation(convo);
       setMessages(msgs);
       setLoading(false);
-      const { updatedCount } = await markConversationMessagesRead(conversationId, user.id);
-      console.log('[MessageThread] mark-as-read updated rows =', updatedCount);
-      window.dispatchEvent(new CustomEvent('strove:refresh-dm-badge'));
+
+      // Inbound = messages from the other person that aren't read yet. These
+      // are exactly the ones the update touches, so we can hand the delta
+      // straight to AppShell as an optimistic decrement.
+      const expectedUnreadDelta = (msgs || []).filter(
+        (m) => m.sender_id !== user.id && !m.is_read
+      ).length;
+      console.log(
+        '[MessageThread] opening conversation =', conversationId,
+        'expected unread delta =', expectedUnreadDelta
+      );
+
+      const { error, updatedCount } = await markConversationMessagesRead(conversationId, user.id);
+      console.log(
+        '[MessageThread] mark-as-read result',
+        { error, updatedCount, expectedUnreadDelta }
+      );
+
+      window.dispatchEvent(
+        new CustomEvent('strove:refresh-dm-badge', {
+          detail: {
+            conversationId,
+            delta: updatedCount || expectedUnreadDelta || 0,
+          },
+        })
+      );
     })();
     return () => { cancelled = true; };
   }, [conversationId, user?.id, navigate]);
