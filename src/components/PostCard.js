@@ -427,6 +427,10 @@ function CommentsBlock({
   commentSubmitting,
   canPost,
 }) {
+  const [expanded, setExpanded] = useState({});
+  const toggleExpanded = (rootId) =>
+    setExpanded((m) => ({ ...m, [rootId]: !m[rootId] }));
+
   const roots = comments.filter((c) => !c.parent_comment_id);
   const childrenByParent = comments.reduce((acc, c) => {
     if (!c.parent_comment_id) return acc;
@@ -467,40 +471,61 @@ function CommentsBlock({
     <div className="mt-3 pt-3 border-t border-border flex flex-col gap-3">
       {roots.length > 0 ? (
         <ul className="flex flex-col gap-3">
-          {roots.map((root) => (
-            <li key={root.id} className="flex flex-col gap-2">
-              <CommentRow
-                comment={root}
-                currentUserId={currentUserId}
-                liked={likedCommentIds.has(root.id)}
-                highlighted={highlightCommentId === root.id}
-                onToggleLike={onToggleLike}
-                onStartReply={onStartReply}
-                onDelete={onDelete}
-              />
-              {(childrenByParent[root.id] || []).length > 0 || replyTo?.id === root.id ? (
-                <ul className="pl-9 flex flex-col gap-2 border-l border-border ml-3">
-                  {(childrenByParent[root.id] || []).map((child) => (
-                    <li key={child.id} className="flex flex-col gap-2">
-                      <CommentRow
-                        comment={child}
-                        currentUserId={currentUserId}
-                        liked={likedCommentIds.has(child.id)}
-                        highlighted={highlightCommentId === child.id}
-                        onToggleLike={onToggleLike}
-                        onStartReply={onStartReply}
-                        onDelete={onDelete}
-                      />
-                      {replyTo?.id === child.id ? replyForm : null}
-                    </li>
-                  ))}
-                  {replyTo?.id === root.id ? (
-                    <li key="root-reply-form">{replyForm}</li>
-                  ) : null}
-                </ul>
-              ) : null}
-            </li>
-          ))}
+          {roots.map((root) => {
+            const childList = childrenByParent[root.id] || [];
+            const hasChildren = childList.length > 0;
+            const isReplyingHere =
+              replyTo?.id === root.id ||
+              childList.some((c) => replyTo?.id === c.id);
+            const highlightInside = childList.some((c) => c.id === highlightCommentId);
+            const forceOpen = isReplyingHere || highlightInside;
+            const isExpanded = forceOpen || !!expanded[root.id];
+            return (
+              <li key={root.id} className="flex flex-col gap-2">
+                <CommentRow
+                  comment={root}
+                  currentUserId={currentUserId}
+                  liked={likedCommentIds.has(root.id)}
+                  highlighted={highlightCommentId === root.id}
+                  onToggleLike={onToggleLike}
+                  onStartReply={onStartReply}
+                  onDelete={onDelete}
+                />
+                {hasChildren && !forceOpen ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded(root.id)}
+                    className="self-start pl-9 text-[12px] font-semibold text-orange hover:underline"
+                  >
+                    {expanded[root.id]
+                      ? 'Hide replies'
+                      : 'View ' + childList.length + ' ' + (childList.length === 1 ? 'reply' : 'replies')}
+                  </button>
+                ) : null}
+                {isExpanded && (hasChildren || replyTo?.id === root.id) ? (
+                  <ul className="pl-9 flex flex-col gap-2 border-l border-border ml-3">
+                    {childList.map((child) => (
+                      <li key={child.id} className="flex flex-col gap-2">
+                        <CommentRow
+                          comment={child}
+                          currentUserId={currentUserId}
+                          liked={likedCommentIds.has(child.id)}
+                          highlighted={highlightCommentId === child.id}
+                          onToggleLike={onToggleLike}
+                          onStartReply={onStartReply}
+                          onDelete={onDelete}
+                        />
+                        {replyTo?.id === child.id ? replyForm : null}
+                      </li>
+                    ))}
+                    {replyTo?.id === root.id ? (
+                      <li key="root-reply-form">{replyForm}</li>
+                    ) : null}
+                  </ul>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       ) : null}
       {canPost ? (
