@@ -128,8 +128,7 @@ export default function MessageThread() {
   }, [conversationId, user?.id]);
 
   useEffect(() => {
-    const el = document.getElementById('messages-scroll');
-    if (el) el.scrollTop = el.scrollHeight;
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' });
   }, [messages]);
 
   async function submit(e) {
@@ -174,8 +173,8 @@ export default function MessageThread() {
     .find((m) => m.sender_id === user?.id && !m._pending)?.id;
 
   return (
-    <div className="-mx-4 flex flex-col h-[calc(100dvh-57px)] overflow-hidden">
-      <div className="border-b border-border px-4 py-3 flex items-center gap-3">
+    <div className="-mx-4 flex flex-col">
+      <div className="sticky top-[57px] z-10 bg-bg/95 backdrop-blur border-b border-border px-4 py-3 flex items-center gap-3">
         <button
           type="button"
           onClick={() => navigate('/messages')}
@@ -195,7 +194,7 @@ export default function MessageThread() {
         </Link>
       </div>
 
-      <div id="messages-scroll" className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-2">
+      <div className="px-4 py-4 flex flex-col gap-2">
         {loading ? (
           <LoadingBlock label="Loading messages…" />
         ) : messages.length === 0 ? (
@@ -235,7 +234,7 @@ export default function MessageThread() {
 
       <form
         onSubmit={submit}
-        className="mx-4 mb-2 mt-3 flex items-center gap-2 bg-card border border-border rounded-full px-3 py-1.5"
+        className="sticky bottom-[64px] mx-4 mb-2 mt-3 flex items-center gap-2 bg-card border border-border rounded-full px-3 py-1.5"
       >
         <input
           type="text"
