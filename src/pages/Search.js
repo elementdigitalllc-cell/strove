@@ -9,6 +9,12 @@ import {
   getFollowing,
   createNotification,
 } from '../lib/sdb';
+import {
+  getRecentSearches,
+  addRecentSearch,
+  removeRecentSearch,
+  clearRecentSearches,
+} from '../lib/recentSearches';
 import { Avatar } from '../components/ui/Avatar';
 import { StreakPill } from '../components/ui/Pill';
 import { cn } from '../lib/cn';
@@ -21,11 +27,17 @@ export default function Search() {
   const [followingSet, setFollowingSet] = useState(() => new Set());
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [recents, setRecents] = useState([]);
   const inputRef = useRef(null);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    setRecents(getRecentSearches(user.id));
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -110,7 +122,10 @@ export default function Search() {
             <li
               key={p.id}
               className="flex items-center gap-3 px-4 py-3 border-b border-border hover:bg-card/60 transition-colors cursor-pointer"
-              onClick={() => navigate('/profile/' + p.id)}
+              onClick={() => {
+                if (user?.id) setRecents(addRecentSearch(user.id, p));
+                navigate('/profile/' + p.id);
+              }}
               role="button"
             >
               <Avatar name={p.full_name || p.username || '?'} size="md" />
@@ -146,6 +161,58 @@ export default function Search() {
           <div className="text-4xl">🔍</div>
           <h2 className="text-[16px] font-bold">No users found</h2>
           <p className="text-sm text-muted">Try a different name or @username.</p>
+        </div>
+      ) : recents.length > 0 ? (
+        <div>
+          <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+            <h2 className="text-[12px] font-bold uppercase tracking-wider text-muted">
+              Recent Searches
+            </h2>
+            <button
+              type="button"
+              onClick={() => {
+                if (!user?.id) return;
+                clearRecentSearches(user.id);
+                setRecents([]);
+              }}
+              className="text-[12px] font-semibold text-orange hover:underline"
+            >
+              Clear all
+            </button>
+          </div>
+          <ul className="flex flex-col">
+            {recents.map((p) => (
+              <li
+                key={p.id}
+                onClick={() => {
+                  if (user?.id) setRecents(addRecentSearch(user.id, p));
+                  navigate('/profile/' + p.id);
+                }}
+                role="button"
+                className="flex items-center gap-3 px-4 py-3 border-b border-border hover:bg-card/60 transition-colors cursor-pointer"
+              >
+                <Avatar name={p.full_name || p.username || '?'} size="md" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-fg text-[14.5px] truncate">
+                    {p.full_name || p.username}
+                  </div>
+                  <div className="text-[13px] text-muted font-medium truncate">@{p.username}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!user?.id) return;
+                    setRecents(removeRecentSearch(user.id, p.id));
+                  }}
+                  aria-label="Remove from recent searches"
+                  className="h-8 w-8 grid place-items-center rounded text-muted hover:text-fg hover:bg-card transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       ) : (
         <div className="px-4 py-6 text-center text-sm text-muted">
